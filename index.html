@@ -536,6 +536,61 @@ input[type=range]{width:100%;accent-color:var(--pri)}
   background: var(--elev);
   border-color: var(--pri);
 }
+
+/* Dashboard estilo Coach Performance */
+.coach-dash-header {
+  background: var(--card);
+  border: 1px solid var(--ln);
+  border-radius: 16px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+.coach-nav-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-top: 8px;
+}
+.coach-nav-tab {
+  background: var(--pill);
+  border: 1px solid var(--ln2);
+  color: var(--mu);
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.coach-nav-tab.on {
+  background: var(--pri);
+  color: var(--on-pri);
+  border-color: var(--pri);
+  font-weight: 700;
+}
+.dashboard-kpi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.kpi-card {
+  background: var(--card);
+  border: 1px solid var(--ln);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: var(--sh);
+}
+.kpi-card b {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--tx);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
 </style>
 </head>
 <body>
@@ -629,7 +684,7 @@ const BANCO_EXER = [
   { n: "Agachamento Livre", m: "Pernas", v: "https://www.youtube.com/watch?v=aclHkVaku9U" },
   { n: "Leg Press 45º", m: "Pernas", v: "https://www.youtube.com/watch?v=IZxyjW7MPJQ" },
   { n: "Cadeira Extensora", m: "Pernas", v: "" },
-  { n: "Mesa Flexit", m: "Pernas", v: "" },
+  { n: "Mesa Flexora", m: "Pernas", v: "" },
   { n: "Puxada Alta na Polia", m: "Costas", v: "https://www.youtube.com/watch?v=CAwf7n6Luuc" },
   { n: "Remada Curvada com Barra", m: "Costas", v: "https://www.youtube.com/watch?v=vT2GjY_Umpw" },
   { n: "Remada Baixa na Polia", m: "Costas", v: "" },
@@ -676,7 +731,7 @@ const urlParams = new URLSearchParams(window.location.search);
 let urlAluno = urlParams.get('aluno');
 let me = urlAluno ? ('aluno_' + slugify(urlAluno)) : '';
 
-let coachView = !urlAluno && localStorage.getItem('reis_coach') === '1', tab = 0, W = null, tk = null, rest = 0, ed = null, open = null;
+let coachView = !urlAluno && localStorage.getItem('reis_coach') === '1', coachTab = 'inicio', tab = 0, W = null, tk = null, rest = 0, ed = null, open = null;
 
 async function loadFromCloud(){
   try {
@@ -1147,117 +1202,167 @@ function selecionarExercicioModal(exerIdx, nomeEx, videoUrl){
   view();
 }
 
+function setCoachTab(tabName){
+  coachTab = tabName;
+  viewC();
+}
+
 function viewC(){
- const ids=Object.keys(D.perfis||{});
+ const ids = Object.keys(D.perfis||{});
  const mesAtual = new Date().toISOString().slice(0,7);
 
- let h=`
-  <div class="card" style="border-left: 3px solid var(--pri); margin-bottom: 20px;">
-   <h3 style="color:var(--pri)">💰 Controlo Financeiro de Mensalidades (${mesAtual})</h3>
-   <p class="mu" style="margin-top:6px; font-size:0.86rem; line-height:1.5">
-    Acompanhe rapidamente quais alunos estão em dia com os pagamentos deste mês.
-   </p>
-  </div>
- `;
+ let totalAlunos = ids.length;
+ let treinosHojeCount = 0;
+ let pendenciasCount = 0;
+ let somaAderencia = 0;
 
- if(ids.length){
-   h += `<div class="card" style="overflow-x:auto">
-    <table style="font-size:0.85rem">
-      <tr><th>Aluno</th><th>Mensalidade (${mesAtual})</th><th>Ação rápida</th></tr>`;
-   h += ids.map(u => {
-     const pago = D.financeiro && D.financeiro[u] && D.financeiro[u][mesAtual];
-     return `<tr>
-       <td><b>${esc(D.perfis[u].n)}</b></td>
-       <td><span class="bd ${pago ? 'ok' : 'warn'}">${pago ? '✓ Pago em Dia' : '⚠️ Pendente'}</span></td>
-       <td><button class="btn s ${pago ? 'g' : 't'}" style="padding:4px 10px; font-size:0.75rem" onclick="togglePagamentoPin('${u}', ${!pago})">${pago ? 'Marcar Pendente' : 'Confirmar Pagamento'}</button></td>
-     </tr>`;
-   }).join('');
-   h += `</table></div>`;
- }
-
- h += `
-  <h2>📁 Modelos Salvos (Templates)</h2>
-  <div style="display:flex; gap:8px; margin-bottom:14px">
-    <button class="btn t" style="flex:1" data-c="novoTemplate">+ Criar Modelo de Treino</button>
-  </div>
- `;
-
- const templates = D.templates || {};
- const tKeys = Object.keys(templates);
- if(tKeys.length){
-   h += tKeys.map(tid => {
-     const t = templates[tid];
-     return `<div class="card" style="display:flex; justify-content:space-between; align-items:center">
-       <div><h3>${esc(t.n)}</h3><div class="mu">${t.ex.length} exercício(s) cadastrados</div></div>
-       <div>
-         <button class="btn s t" style="margin:0" data-c="aplicarTemplate" data-tid="${tid}">Aplicar a Aluno</button>
-         <button class="x" data-c="delTemplate" data-tid="${tid}" style="color:var(--danger)">Excluir</button>
-       </div>
-     </div>`;
-   }).join('');
- } else {
-   h += '<div class="card"><p class="mu">Nenhum modelo de treino criado ainda.</p></div>';
- }
-
- let allWorkouts = [];
  ids.forEach(u => {
-   hist(u).forEach(w => {
-     allWorkouts.push({ alunoId: u, alunoNome: D.perfis[u].n, ...w });
-   });
+   const tMes = hist(u).filter(item => item.d && item.d.startsWith(mesAtual)).length;
+   const anamU = D.anamnese && D.anamnese[u];
+   const metaD = anamU && parseInt(anamU.dias) ? parseInt(anamU.dias) : 3;
+   const metaM = metaD * 4;
+   somaAderencia += Math.min(100, Math.round((tMes / metaM) * 100));
+
+   // Pendência se pagamento estiver pendente
+   const pago = D.financeiro && D.financeiro[u] && D.financeiro[u][mesAtual];
+   if(!pago) pendenciasCount++;
  });
- allWorkouts.sort((a,b) => b.id - a.id);
 
- if(allWorkouts.length){
-   h += '<h2>🔔 Últimos Treinos Concluídos</h2>';
-   h += allWorkouts.slice(0, 3).map(w => `
-     <div class="card" style="border-left: 3px solid var(--ok)">
-       <div style="display:flex; justify-content:space-between">
-         <b>${esc(w.alunoNome)}</b>
-         <span class="mu">${dt(w.d)} · ${mmss(w.dur)}</span>
-       </div>
-       <p style="margin:6px 0 0; font-size:0.9rem">Finalizou: <b>${esc(w.n)}</b> (PSE: ${w.pse}/10)</p>
-     </div>
-   `).join('');
- }
+ const mediaAderencia = totalAlunos > 0 ? Math.round(somaAderencia / totalAlunos) : 0;
 
- h += `
-  <h2>Painel Geral de Alunos</h2>
-  <button class="btn t" style="margin-bottom:16px" data-c="novoAluno">+ Adicionar Novo Aluno</button>
+ let h = `
+  <div class="coach-dash-header">
+    <div style="font-size:0.75rem; color:var(--mu); text-transform:uppercase; letter-spacing:0.06em; font-weight:700">Coach Performance</div>
+    <h3 style="font-size:1.15rem; margin:2px 0 10px">Painel de Treinamento</h3>
+    <div class="coach-nav-tabs">
+      <button class="coach-nav-tab ${coachTab==='inicio'?'on':''}" onclick="setCoachTab('inicio')">🏠 Início</button>
+      <button class="coach-nav-tab ${coachTab==='alunos'?'on':''}" onclick="setCoachTab('alunos')">👥 Alunos</button>
+      <button class="coach-nav-tab ${coachTab==='treinos'?'on':''}" onclick="setCoachTab('treinos')">🏋️ Treinos</button>
+      <button class="coach-nav-tab ${coachTab==='financeiro'?'on':''}" onclick="setCoachTab('financeiro')">💳 Financeiro</button>
+    </div>
+  </div>
  `;
 
- if(ids.length){
-  h+=ids.map(u=>{
-   const checked = (D.checks||{})[u] ? 'checked' : '';
-   const alunoNomeOriginal = D.perfis[u].n;
-   const nomeParam = slugify(alunoNomeOriginal);
-   const linkAluno = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + '?aluno=' + nomeParam;
-   
-   const anamU = D.anamnese && D.anamnese[u];
-   const metaDiasSemana = anamU && parseInt(anamU.dias) ? parseInt(anamU.dias) : 3;
-   const metaMes = metaDiasSemana * 4;
-   const treinosMes = hist(u).filter(item => item.d && item.d.startsWith(mesAtual)).length;
-   const aderenciaPct = Math.min(100, Math.round((treinosMes / metaMes) * 100));
+ if(coachTab === 'inicio' && !open){
+   h += `
+    <div style="margin-bottom:20px">
+      <h2 style="font-size:1.3rem; margin-bottom:4px">Olá, Coach.</h2>
+      <p class="mu">Acompanhe sua operação de treinamento em tempo real.</p>
+    </div>
+    
+    <div class="dashboard-kpi-grid">
+      <div class="kpi-card">
+        <span class="mu">Alunos ativos</span>
+        <b>${totalAlunos}</b>
+      </div>
+      <div class="kpi-card">
+        <span class="mu">Treinos no mês</span>
+        <b>${ids.reduce((acc, u)=>acc + hist(u).filter(i=>i.d&&i.d.startsWith(mesAtual)).length, 0)}</b>
+      </div>
+      <div class="kpi-card">
+        <span class="mu">Pendências</span>
+        <b style="color:var(--danger)">${pendenciasCount}</b>
+      </div>
+      <div class="kpi-card">
+        <span class="mu">Adesão média</span>
+        <b style="color:var(--ok)">${mediaAderencia}%</b>
+      </div>
+    </div>
+   `;
+ }
 
-   const hLst = hist(u).filter(item=>item.tipo!=='corrida');
-   let alertAnalytics = '<span class="mu" style="font-size:0.75rem">Sem dados suficientes para analytics</span>';
-   if(hLst.length >= 2){
-     const ultimo = hLst[0];
-     const penultimo = hLst[1];
-     const volUltimo = ultimo.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*s.r,0),0);
-     const volPenultimo = penultimo.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*s.r,0),0);
-     if(volUltimo > volPenultimo){
-       alertAnalytics = '<span style="color:var(--ok); font-size:0.78rem; font-weight:700">📈 Em progressão de carga recente!</span>';
-     } else {
-       alertAnalytics = '<span style="color:var(--wn-tx); font-size:0.78rem; font-weight:700">⚠️ Volume estável ou em estagnação</span>';
-     }
+ if(coachTab === 'financeiro' || coachTab === 'inicio'){
+   h+=`
+    <div class="card" style="border-left: 3px solid var(--pri); margin-bottom: 20px;">
+     <h3 style="color:var(--pri)">💰 Controlo Financeiro (${mesAtual})</h3>
+     <p class="mu" style="margin-top:6px; font-size:0.86rem; line-height:1.5">
+      Acompanhe rapidamente quais alunos estão em dia com os pagamentos deste mês.
+     </p>
+    </div>
+   `;
+
+   if(ids.length){
+     h += `<div class="card" style="overflow-x:auto">
+      <table style="font-size:0.85rem">
+        <tr><th>Aluno</th><th>Mensalidade</th><th>Ação rápida</th></tr>`;
+     h += ids.map(u => {
+       const pago = D.financeiro && D.financeiro[u] && D.financeiro[u][mesAtual];
+       return `<tr>
+         <td><b>${esc(D.perfis[u].n)}</b></td>
+         <td><span class="bd ${pago ? 'ok' : 'warn'}">${pago ? '✓ Pago' : '⚠️ Pendente'}</span></td>
+         <td><button class="btn s ${pago ? 'g' : 't'}" style="padding:4px 10px; font-size:0.75rem" onclick="togglePagamentoPin('${u}', ${!pago})">${pago ? 'Marcar Pendente' : 'Confirmar'}</button></td>
+       </tr>`;
+     }).join('');
+     h += `</table></div>`;
    }
+ }
 
-   return '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'+
-   '<div style="display:flex;align-items:center;gap:10px"><input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" '+checked+' style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer"><div><h3>'+esc(alunoNomeOriginal)+'</h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)'+(hist(u)[0]?' · último em '+dt(hist(u)[0].d):'')+'</div><div style="margin-top:2px"><span class="bd ok" style="margin:2px 0">📊 Aderência mensal: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+' treinos)</span></div><div style="margin-top:2px">'+alertAnalytics+'</div>'+(hist(u)[0]&&hist(u)[0].ck&&hist(u)[0].ck.dor?'<div class="bd warn" style="margin-top:4px">⚠ Dor relatada no último treino</div>':'')+'<div style="margin-top:6px; display:flex; gap:6px"><button class="btn s g" style="padding:6px 10px;font-size:.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link</button><button class="btn s t" style="padding:6px 10px;font-size:.75rem; margin:0" data-c="gerarPDF" data-id="'+esc(u)+'">📄 Baixar Relatório PDF</button></div></div></div>'+
-   '<div><button class="btn s" data-c="open" data-id="'+esc(u)+'">Abrir</button><button class="x" data-c="delAluno" data-id="'+esc(u)+'" style="color:var(--danger)">Excluir</button></div></div></div>';
-  }).join('');
- } else {
-  h+='<div class="card"><p class="mu">Nenhum aluno cadastrado ainda. Clique em "+ Adicionar Novo Aluno" acima para começar.</p></div>';
+ if(coachTab === 'treinos' || coachTab === 'inicio'){
+   h += `
+    <h2>📁 Modelos Salvos (Templates)</h2>
+    <div style="display:flex; gap:8px; margin-bottom:14px">
+      <button class="btn t" style="flex:1" data-c="novoTemplate">+ Criar Modelo de Treino</button>
+    </div>
+   `;
+
+   const templates = D.templates || {};
+   const tKeys = Object.keys(templates);
+   if(tKeys.length){
+     h += tKeys.map(tid => {
+       const t = templates[tid];
+       return `<div class="card" style="display:flex; justify-content:space-between; align-items:center">
+         <div><h3>${esc(t.n)}</h3><div class="mu">${t.ex.length} exercício(s) cadastrados</div></div>
+         <div>
+           <button class="btn s t" style="margin:0" data-c="aplicarTemplate" data-tid="${tid}">Aplicar</button>
+           <button class="x" data-c="delTemplate" data-tid="${tid}" style="color:var(--danger)">Excluir</button>
+         </div>
+       </div>`;
+     }).join('');
+   } else {
+     h += '<div class="card"><p class="mu">Nenhum modelo de treino criado ainda.</p></div>';
+   }
+ }
+
+ if(coachTab === 'alunos' || coachTab === 'inicio' || coachTab === 'treinos'){
+   h += `
+    <h2>Painel Geral de Alunos</h2>
+    <button class="btn t" style="margin-bottom:16px" data-c="novoAluno">+ Adicionar Novo Aluno</button>
+   `;
+
+   if(ids.length){
+    h+=ids.map(u=>{
+     const checked = (D.checks||{})[u] ? 'checked' : '';
+     const alunoNomeOriginal = D.perfis[u].n;
+     const nomeParam = slugify(alunoNomeOriginal);
+     const linkAluno = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + '?aluno=' + nomeParam;
+     
+     const anamU = D.anamnese && D.anamnese[u];
+     const metaDiasSemana = anamU && parseInt(anamU.dias) ? parseInt(anamU.dias) : 3;
+     const metaMes = metaDiasSemana * 4;
+     const treinosMes = hist(u).filter(item => item.d && item.d.startsWith(mesAtual)).length;
+     const aderenciaPct = Math.min(100, Math.round((treinosMes / metaMes) * 100));
+
+     const hLst = hist(u).filter(item=>item.tipo!=='corrida');
+     let alertAnalytics = '<span class="mu" style="font-size:0.75rem">Sem dados suficientes para analytics</span>';
+     if(hLst.length >= 2){
+       const ultimo = hLst[0];
+       const penultimo = hLst[1];
+       const volUltimo = ultimo.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*s.r,0),0);
+       const volPenultimo = penultimo.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*s.r,0),0);
+       if(volUltimo > volPenultimo){
+         alertAnalytics = '<span style="color:var(--ok); font-size:0.78rem; font-weight:700">📈 Em progressão de carga recente!</span>';
+       } else {
+         alertAnalytics = '<span style="color:var(--wn-tx); font-size:0.78rem; font-weight:700">⚠️ Volume estável ou em estagnação</span>';
+       }
+     }
+
+     return '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'+
+     '<div style="display:flex;align-items:center;gap:10px"><input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" '+checked+' style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer"><div><h3>'+esc(alunoNomeOriginal)+'</h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)'+(hist(u)[0]?' · último em '+dt(hist(u)[0].d):'')+'</div><div style="margin-top:2px"><span class="bd ok" style="margin:2px 0">📊 Aderência: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+')</span></div><div style="margin-top:2px">'+alertAnalytics+'</div>'+(hist(u)[0]&&hist(u)[0].ck&&hist(u)[0].ck.dor?'<div class="bd warn" style="margin-top:4px">⚠ Dor relatada no último treino</div>':'')+'<div style="margin-top:6px; display:flex; gap:6px"><button class="btn s g" style="padding:6px 10px;font-size:.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link</button><button class="btn s t" style="padding:6px 10px;font-size:.75rem; margin:0" data-c="gerarPDF" data-id="'+esc(u)+'">📄 PDF</button></div></div></div>'+
+     '<div><button class="btn s" data-c="open" data-id="'+esc(u)+'">Abrir</button><button class="x" data-c="delAluno" data-id="'+esc(u)+'" style="color:var(--danger)">Excluir</button></div></div></div>';
+    }).join('');
+   } else {
+    h+='<div class="card"><p class="mu">Nenhum aluno cadastrado ainda.</p></div>';
+   }
  }
 
  if(open && D.perfis[open]){
@@ -1582,7 +1687,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   if(!ed.n.trim()) return;
   if(ed.tipo === 'corrida'){
     const runData = calcRunningZones(D.corrida && D.corrida[u] ? D.corrida[u].cooper : null);
-    const ex = ed.ex.filter(x=>x.e.trim()).app(x=>{
+    const ex = ed.ex.filter(x=>x.e.trim()).map(x=>{
       const zObj = runData ? runData.zones.find(item=>item.z===x.zona) : null;
       return {
         e: x.e.trim(),
