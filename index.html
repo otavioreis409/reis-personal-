@@ -332,7 +332,7 @@ tr.d .ty{
 }
 .tA{color:var(--ta)!important;background:var(--pri-t)!important}
 .tF{color:var(--tf)!important;background:var(--danger-t)!important}
-.tD{color:var(--acc)!important;background:var(--acc-t!important)}
+.tD{color:var(--acc)!important;background:var(--acc-t)!important}
 
 .ex h3{color:var(--tx);margin:0;font-size:1.02rem;font-weight:700}
 .vd{
@@ -491,6 +491,51 @@ input[type=range]{width:100%;accent-color:var(--pri)}
   0% { transform: translateX(-50%) scale(0); opacity: 0; }
   100% { transform: translateX(-50%) scale(1); opacity: 1; }
 }
+
+/* Modal de Busca de Exercícios */
+#modalBuscaEx {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+.modal-box {
+  background: var(--card);
+  border: 1px solid var(--ln);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  box-shadow: var(--sh-float);
+}
+.ex-list-scroll {
+  overflow-y: auto;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.ex-item-card {
+  background: var(--pill);
+  border: 1px solid var(--ln2);
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.ex-item-card:hover {
+  background: var(--elev);
+  border-color: var(--pri);
+}
 </style>
 </head>
 <body>
@@ -554,7 +599,9 @@ input[type=range]{width:100%;accent-color:var(--pri)}
  <section id="vt" hidden></section>
 </main>
 <div class="tabs" id="tabs"><button data-v="0"><b>🏋️</b>Treino</button><button data-v="1"><b>🗓️</b>Histórico</button><button data-v="2"><b>📈</b>Progresso</button></div>
-<div id="w" hidden></div><datalist id="exl"></datalist>
+<div id="w" hidden></div>
+<div id="modalBuscaEx" hidden></div>
+<datalist id="exl"></datalist>
 <script>
 // CONFIGURAÇÃO DO FIREBASE
 const firebaseConfig = {
@@ -576,15 +623,24 @@ const work=s=>s.filter(x=>x.t!=='A');
 const slugify=s=>s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 
 const BANCO_EXER = [
-  { n: "Supino Reto com Barra", v: "https://www.youtube.com/watch?v=rT7DgCr-3pg" },
-  { n: "Supino Inclinado com Halteres", v: "https://www.youtube.com/watch?v=5xPuvmUnzZ8" },
-  { n: "Agachamento Livre", v: "https://www.youtube.com/watch?v=aclHkVaku9U" },
-  { n: "Leg Press 45º", v: "https://www.youtube.com/watch?v=IZxyjW7MPJQ" },
-  { n: "Puxada Alta na Polia", v: "https://www.youtube.com/watch?v=CAwf7n6Luuc" },
-  { n: "Remada Curvada", v: "https://www.youtube.com/watch?v=vT2GjY_Umpw" },
-  { n: "Elevação Lateral", v: "https://www.youtube.com/watch?v=3VscugTfxzo" },
-  { n: "Rosca Direta", v: "https://www.youtube.com/watch?v=ykJmrZ5v0Oo" },
-  { n: "Tríceps Testa", v: "https://www.youtube.com/watch?v=d_KZxkY_0cM" }
+  { n: "Supino Reto com Barra", m: "Peitoral", v: "https://www.youtube.com/watch?v=rT7DgCr-3pg" },
+  { n: "Supino Inclinado com Halteres", m: "Peitoral", v: "https://www.youtube.com/watch?v=5xPuvmUnzZ8" },
+  { n: "Crucifixo na Polia", m: "Peitoral", v: "" },
+  { n: "Agachamento Livre", m: "Pernas", v: "https://www.youtube.com/watch?v=aclHkVaku9U" },
+  { n: "Leg Press 45º", m: "Pernas", v: "https://www.youtube.com/watch?v=IZxyjW7MPJQ" },
+  { n: "Cadeira Extensora", m: "Pernas", v: "" },
+  { n: "Mesa Flexit", m: "Pernas", v: "" },
+  { n: "Puxada Alta na Polia", m: "Costas", v: "https://www.youtube.com/watch?v=CAwf7n6Luuc" },
+  { n: "Remada Curvada com Barra", m: "Costas", v: "https://www.youtube.com/watch?v=vT2GjY_Umpw" },
+  { n: "Remada Baixa na Polia", m: "Costas", v: "" },
+  { n: "Elevação Lateral com Halteres", m: "Ombros", v: "https://www.youtube.com/watch?v=3VscugTfxzo" },
+  { n: "Desenvolvimento com Halteres", m: "Ombros", v: "" },
+  { n: "Rosca Direta com Barra", m: "Bíceps", v: "https://www.youtube.com/watch?v=ykJmrZ5v0Oo" },
+  { n: "Rosca Martelo", m: "Bíceps", v: "" },
+  { n: "Tríceps Testa com Barra", m: "Tríceps", v: "https://www.youtube.com/watch?v=d_KZxkY_0cM" },
+  { n: "Tríceps na Polia com Corda", m: "Tríceps", v: "" },
+  { n: "Panturrilhas em Pé na Máquina", m: "Panturrilhas", v: "" },
+  { n: "Abdominal Supra no Solo", m: "Abdômen", v: "" }
 ];
 
 function formatPace(minPerKm){
@@ -1048,6 +1104,49 @@ async function togglePagamento(u, status){
   view();
 }
 
+function abrirBuscaExercicios(exerIdx){
+  const modal = $('modalBuscaEx');
+  modal.hidden = false;
+  modal.innerHTML = `
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center">
+        <h3>🔍 Banco de Exercícios</h3>
+        <button class="x" onclick="$('modalBuscaEx').hidden=true">✕ Fechar</button>
+      </div>
+      <input class="t" id="filtroExInput" placeholder="Digite para filtrar (ex: Supino, Rosca...)" style="margin-top:10px" oninput="filtrarModalEx()">
+      <div class="ex-list-scroll" id="listaModalEx">
+        ${BANCO_EXER.map((item, idx)=>`
+          <div class="ex-item-card" onclick="selecionarExercicioModal(${exerIdx}, '${item.n.replace(/'/g, "\\'")}', '${item.v}')">
+            <b>${esc(item.n)}</b>
+            <div class="mu">Músculo: ${esc(item.m)}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  setTimeout(()=>$('filtroExInput').focus(), 100);
+}
+
+function filtrarModalEx(){
+  const termo = $('filtroExInput').value.toLowerCase();
+  const filtrados = BANCO_EXER.filter(i => i.n.toLowerCase().includes(termo) || i.m.toLowerCase().includes(termo));
+  const container = $('listaModalEx');
+  container.innerHTML = filtrados.map(item=>`
+    <div class="ex-item-card" onclick="selecionarExercicioModal(window.currentExIdx, '${item.n.replace(/'/g, "\\'")}', '${item.v}')">
+      <b>${esc(item.n)}</b>
+      <div class="mu">Músculo: ${esc(item.m)}</div>
+    </div>
+  `).join('');
+}
+
+function selecionarExercicioModal(exerIdx, nomeEx, videoUrl){
+  window.currentExIdx = exerIdx;
+  ed.ex[exerIdx].e = nomeEx;
+  ed.ex[exerIdx].v = videoUrl;
+  $('modalBuscaEx').hidden = true;
+  view();
+}
+
 function viewC(){
  const ids=Object.keys(D.perfis||{});
  const mesAtual = new Date().toISOString().slice(0,7);
@@ -1262,18 +1361,21 @@ function viewC(){
          if(foundEx && foundEx.s && foundEx.s.length){
            lastPerfText = '💡 Último registro ('+dt(th.d)+'): ' + foundEx.s.map(s=>fmt(s.kg)+'kg×'+s.r).join(' | ');
            
-           // Calculadora sugerida por RPE/1RM
            const ultS = foundEx.s[foundEx.s.length - 1];
            if(ultS && ultS.kg > 0 && ultS.r > 0){
              const est1RM = e1(ultS.kg, ultS.r);
-             const sugeridoKg = est1RM * 0.78; // Sugestão para hipertrofia (aprox 78% 1RM)
+             const sugeridoKg = est1RM * 0.78;
              recRpeText = '🧠 Sugestão IA (Base 1RM ' + fmt(est1RM) + 'kg): Próxima carga sugerida ~' + fmt(sugeridoKg) + 'kg';
            }
            break;
          }
        }
 
-       return '<div class="edr"><input class="t" list="exl" data-ex="'+exerIdx+'" data-f="e" value="'+esc(x.e)+'" placeholder="Nome do exercício" data-auto-ex="'+exerIdx+'">'+
+       return '<div class="edr">'+
+       '<div style="display:flex; gap:8px; align-items:center">'+
+       '<input class="t" data-ex="'+exerIdx+'" data-f="e" value="'+esc(x.e)+'" placeholder="Nome do exercício" style="flex:1">'+
+       '<button class="btn s t" style="margin:0; white-space:nowrap" onclick="abrirBuscaExercicios('+exerIdx+')">🔍 Buscar</button>'+
+       '</div>'+
        (lastPerfText ? '<div class="mu" style="margin-top:4px; font-size:0.78rem; color:var(--pri)">'+lastPerfText+'</div>' : '')+
        (recRpeText ? '<div class="mu" style="margin-top:2px; font-size:0.78rem; color:var(--acc)">'+recRpeText+'</div>' : '')+
        '<div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Link do vídeo</label><input class="t" type="text" data-ex="'+exerIdx+'" data-f="v" value="'+esc(x.v||'')+'" placeholder="https://..."></div>'+
@@ -1340,15 +1442,6 @@ $('vt').addEventListener('input',e=>{
  const t=e.target;
  if(!ed)return;
  if(t.dataset.ed) ed.n = t.value;
- else if(t.dataset.auto_ex !== undefined){
-   const val = t.value;
-   ed.ex[t.dataset.auto_ex].e = val;
-   const found = BANCO_EXER.find(item => item.n.toLowerCase() === val.toLowerCase());
-   if(found){
-     ed.ex[t.dataset.auto_ex].v = found.v;
-     view();
-   }
- }
  else if(t.dataset.f !== undefined && t.dataset.ex !== undefined){
    ed.ex[t.dataset.ex][t.dataset.f] = t.value;
  }
@@ -1489,7 +1582,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   if(!ed.n.trim()) return;
   if(ed.tipo === 'corrida'){
     const runData = calcRunningZones(D.corrida && D.corrida[u] ? D.corrida[u].cooper : null);
-    const ex = ed.ex.filter(x=>x.e.trim()).map(x=>{
+    const ex = ed.ex.filter(x=>x.e.trim()).app(x=>{
       const zObj = runData ? runData.zones.find(item=>item.z===x.zona) : null;
       return {
         e: x.e.trim(),
