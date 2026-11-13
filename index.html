@@ -443,6 +443,32 @@ input[type=range]{width:100%;accent-color:var(--pri)}
    <p class="mu" style="margin-top:8px">Este link de acesso não é válido ou o treinador ainda não cadastrou este perfil. Solicite o link correto ao seu treinador.</p>
   </div>
  </section>
+ <section id="anamnese" hidden>
+  <div class="card">
+   <h3 style="color:var(--pri); font-size:1.2rem; margin-bottom:6px">📋 Anamnese Inicial</h3>
+   <p class="mu" style="margin-bottom:16px">Por favor, preencha os dados abaixo para atualizarmos seu perfil de treinamento.</p>
+   
+   <label class="mu" style="font-size:0.75rem">Altura (ex: 1.75)</label>
+   <input class="t" id="anAlt" type="number" step="0.01" placeholder="Ex: 1.75" style="margin-bottom:12px">
+
+   <label class="mu" style="font-size:0.75rem">Peso atual em kg (ex: 75.5)</label>
+   <input class="t" id="anPeso" type="number" step="0.1" placeholder="Ex: 75.5" style="margin-bottom:12px">
+
+   <label class="mu" style="font-size:0.75rem">Sente alguma dor articular? (Qual e intensidade)</label>
+   <input class="t" id="anDor" placeholder="Ex: Joelho direito leve ao agachar (ou 'Nenhuma')" style="margin-bottom:12px">
+
+   <label class="mu" style="font-size:0.75rem">Quantos dias na semana pretende treinar?</label>
+   <input class="t" id="anDias" placeholder="Ex: 4 dias" style="margin-bottom:12px">
+
+   <label class="mu" style="font-size:0.75rem">Quanto tempo disponível por sessão?</label>
+   <input class="t" id="anTempo" placeholder="Ex: 60 minutos" style="margin-bottom:12px">
+
+   <label class="mu" style="font-size:0.75rem">Qual o objetivo principal do treinamento?</label>
+   <input class="t" id="anObj" placeholder="Ex: Hipertrofia e definição" style="margin-bottom:16px">
+
+   <button class="btn t" id="btnSalvarAnamnese">Salvar e Continuar</button>
+  </div>
+ </section>
  <section id="v0" hidden><h2>Minhas rotinas</h2><div id="rt"></div></section>
  <section id="v1" hidden><h2>Histórico</h2><div id="hs"></div></section>
  <section id="v2" hidden><h2>Progresso</h2><select id="sel"></select>
@@ -459,8 +485,9 @@ const fmt=n=>(Math.round(n*10)/10).toString().replace('.',','),e1=(l,r)=>r<=1?l:
 const mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0'),dt=d=>d.split('-').reverse().slice(0,2).join('/');
 const work=s=>s.filter(x=>x.t!=='A');
 
-let D = JSON.parse(localStorage.getItem('reis_db') || '{"perfis":{},"treinos":{},"rotinas":{},"coment":{},"checks":{}}');
+let D = JSON.parse(localStorage.getItem('reis_db') || '{"perfis":{},"treinos":{},"rotinas":{},"coment":{},"checks":{},"anamnese":{}}');
 if(!D.checks) D.checks = {};
+if(!D.anamnese) D.anamnese = {};
 
 const urlParams = new URLSearchParams(window.location.search);
 let urlAluno = urlParams.get('aluno');
@@ -498,11 +525,48 @@ $('seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
 
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{tab=+b.dataset.v;view()});
 
+$('btnSalvarAnamnese').onclick = () => {
+  const alt = parseFloat($('anAlt').value);
+  const peso = parseFloat($('anPeso').value);
+  const dor = $('anDor').value.trim();
+  const dias = $('anDias').value.trim();
+  const tempo = $('anTempo').value.trim();
+  const obj = $('anObj').value.trim();
+
+  if(!alt || !peso || !obj){
+    alert('Por favor, preencha pelo menos a altura, o peso e o objetivo.');
+    return;
+  }
+
+  D.anamnese[me] = {
+    alt, peso, dor, dias, tempo, obj,
+    data: Date.now()
+  };
+  save();
+  view();
+};
+
+function precisaAnamnese(){
+  if(coachView || !urlAluno) return false;
+  const a = D.anamnese[me];
+  if(!a) return true;
+  // 2 meses = 60 dias em milissegundos (60 * 24 * 60 * 60 * 1000 = 5184000000)
+  const doisMeses = 5184000000;
+  if(Date.now() - a.data > doisMeses) return true;
+  return false;
+}
+
 function view(){
  coachView ? $('btnCoach').classList.add('on') : $('btnAluno').classList.add('on');
- const needName = !coachView && (!urlAluno || !D.perfis[me]);
- $('vn').hidden = !needName; $('vt').hidden = !coachView; $('tabs').hidden = coachView || needName;
- [0,1,2].forEach(i=>$('v'+i).hidden = coachView || needName || i!==tab);
+ const invalidLink = !coachView && (!urlAluno || !D.perfis[me]);
+ const showAnamnese = !coachView && !invalidLink && precisaAnamnese();
+
+ $('vn').hidden = !invalidLink; 
+ $('anamnese').hidden = !showAnamnese;
+ $('vt').hidden = !coachView; 
+ $('tabs').hidden = coachView || invalidLink || showAnamnese;
+ 
+ [0,1,2].forEach(i=>$('v'+i).hidden = coachView || invalidLink || showAnamnese || i!==tab);
  document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on', +x.dataset.v===tab));
  $('who').textContent = coachView ? 'Painel do Treinador' : (D.perfis[me] ? 'Olá, '+D.perfis[me].n+'!' : '');
  
@@ -510,7 +574,7 @@ function view(){
  Object.values(D.treinos).forEach(t=>(t.h||[]).forEach(h=>h.ex.forEach(x=>s.add(x.e))));
  $('exl').innerHTML=[...s].sort().map(e=>'<option value="'+esc(e)+'">').join('');
 
- if(needName) return;
+ if(invalidLink || showAnamnese) return;
  coachView ? viewC() : viewA();
 }
 
@@ -524,19 +588,6 @@ function ckHTML(w){if(!w.ck&&w.pse==null)return '';const c=w.ck,o=[];
   o.push(c.dor?'<span class="bd warn">⚠ Dor: '+esc((c.locs||[]).join(', ')||'local não informado')+' ('+c.int+'/10)'+(c.obs?' · '+esc(c.obs):'')+'</span>':'<span class="bd ok">Sem dor</span>')}
  if(w.pse!=null)o.push('<span class="bd">🔥 PSE '+w.pse+'/10</span>','<span class="bd">Carga da sessão '+Math.round(w.pse*w.dur/60)+' u.a.</span>');
  return '<div>'+o.join('')+'</div>'}
-
-function drawCk(){const c=W.ck,R=['😫|Péssima','😕|Ruim','😐|Ok','🙂|Boa','💪|Ótima'],Z=['🥱|Péssimo','😴|Ruim','😐|Ok','🙂|Bom','😎|Ótimo'];
- const op=(k,A)=>'<div class="opts">'+A.map((t,i)=>{const p=t.split('|');return '<button class="opt'+(c[k]===i+1?' on':'')+'" data-a="q" data-q="'+k+'" data-v="'+(i+1)+'"><b>'+p[0]+'</b>'+p[1]+'</button>'}).join('')+'</div>';
- const LOC=['Ombro','Cotovelo','Punho','Lombar','Cervical','Quadril','Joelho','Tornozelo','Outro'];
- $('w').innerHTML='<div class="wt"><button class="x" data-a="cancel">Cancelar</button><b style="letter-spacing:.08em;font-size:.82rem;color:var(--pri)">CHECK-IN</b><span></span></div><div style="padding:8px 16px;max-width:640px;margin:0 auto"><h2 class="wt-title" style="margin-bottom:14px">Antes de treinar</h2><div class="card">'+
-  '<div class="q"><h4>Como está sua recuperação desde o último treino?</h4>'+op('rec',R)+'</div>'+
-  '<div class="q"><h4>Como foi seu descanso e sono nas últimas noites?</h4>'+op('sono',Z)+'</div>'+
-  '<div class="q" style="margin-bottom:0"><h4>Sente alguma dor?</h4><div class="chips"><button class="chip'+(c.dor?'':' on')+'" data-a="dor" data-v="0">Não</button><button class="chip'+(c.dor?' on':'')+'" data-a="dor" data-v="1">Sim</button></div>'+
-  (c.dor?'<p class="mu" style="margin:12px 0 6px">Onde?</p><div class="chips">'+LOC.map(l=>'<button class="chip'+(c.locs.includes(l)?' on':'')+'" data-a="loc" data-l="'+l+'">'+l+'</button>').join('')+'</div><p class="mu" style="margin:12px 0 4px">Intensidade: <b id="iv" style="color:var(--pri)">'+c.int+'</b>/10</p><input type="range" min="1" max="10" value="'+c.int+'" data-q="int"><input class="t" style="margin-top:8px" data-q="obs" value="'+esc(c.obs)+'" placeholder="Observação (opcional)">':'')+'</div></div>'+
-  '<p id="qe" hidden style="color:var(--danger);font-weight:700">Responda recuperação e descanso para continuar.</p><button class="btn" data-a="go">Começar treino</button></div>'}
-
-function drawPse(){const L=['Repouso','Muito fácil','Fácil','Moderado','Um pouco difícil','Difícil','Difícil','Muito difícil','Muito difícil','Muito difícil','Máximo'];
- $('w').innerHTML='<div class="wt"><button class="x" data-a="back">← Voltar</button><b style="letter-spacing:.08em;font-size:.82rem;color:var(--pri)">FINAL</b><span></span></div><div style="padding:8px 16px;max-width:640px;margin:0 auto"><h2 class="wt-title" style="margin-bottom:14px">Como foi o treino?</h2><div class="card"><h4 style="margin:0 0 4px;font-size:1rem">Percepção de esforço da sessão</h4><p class="mu" style="margin-bottom:14px">Pense no treino inteiro: de 0 (repouso) a 10 (esforço máximo).</p><div class="pse">'+Array.from({length:11},(_,v)=>'<button class="opt'+(W.pse===v?' on':'')+'" data-a="pse" data-v="'+v+'" style="border-bottom:4px solid hsl('+(120-12*v)+',75%,48%)"><b>'+v+'</b></button>').join('')+'</div><p style="margin:14px 0 0;font-weight:700;color:var(--pri)">'+(W.pse===null?'Escolha um número':W.pse+' · '+L[W.pse])+'</p></div><button class="btn" data-a="save">Salvar treino</button></div>'}
 
 function viewA(){
  const R=rts(me);
@@ -570,6 +621,8 @@ $('w').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||
  else if(a==='ck'){const s=W.ex[x].s[i],p=prev(W.ex[x].e,i);if(!s.d){if(s.kg===''&&p)s.kg=p.kg;if(s.r===''&&p)s.r=p.r;if(s.kg===''||s.r==='')return;s.d=true;rest=90}else s.d=false;draw()}
  else if(a==='ty'){const s=W.ex[x].s[i],T=['N','A','F','D'];s.t=T[(T.indexOf(s.t)+1)%4];draw()}
  else if(a==='ad'){W.ex[x].s.push({kg:'',r:'',d:false,t:'N'});draw()}
+ else if(a==='rm'){W.ex.splice(x,1);draw()}
+ else if(a==='ae'){const v=$('ne').value.trim();if(v){W.ex.push({e:v,v:'',s:[{kg:'',r:'',d:false,t:'N'}]});draw()}}
  else if(a==='skip'){rest=0;$('rs').hidden=true}
  else if(a==='cancel')close_();
  else if(a==='end'){if(!W.ex.some(y=>y.s.some(s=>s.d))){close_();return}W.ph='pse';draw()}
@@ -611,7 +664,7 @@ function viewC(){
    const nomeParam = D.perfis[u].n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
    const linkAluno = window.location.origin + window.location.pathname + '?aluno=' + nomeParam;
    return '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'+
-   '<div style="display:flex;align-items:center;gap:10px"><input type="checkbox" data-c="chk" data-id="'+esc(u)+'" '+checked+' style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer"><div><h3>'+esc(D.perfis[u].n)+'</h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)'+(hist(u)[0]?' · último em '+dt(hist(u)[0].d):'')+' · '+rts(u).length+' rotina(s)</div>'+(hist(u)[0]&&hist(u)[0].ck&&hist(u)[0].ck.dor?'<div class="bd warn">⚠ Dor relatada no último treino</div>':'')+'<div style="margin-top:6px"><button class="btn s g" style="padding:6px 10px;font-size:.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link do Aluno</button></div></div></div>'+
+   '<div style="display:flex;align-items:center;gap:10px"><input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" '+checked+' style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer"><div><h3>'+esc(D.perfis[u].n)+'</h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)'+(hist(u)[0]?' · último em '+dt(hist(u)[0].d):'')+' · '+rts(u).length+' rotina(s)</div>'+(hist(u)[0]&&hist(u)[0].ck&&hist(u)[0].ck.dor?'<div class="bd warn">⚠ Dor relatada no último treino</div>':'')+'<div style="margin-top:6px"><button class="btn s g" style="padding:6px 10px;font-size:.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link do Aluno</button></div></div></div>'+
    '<div><button class="btn s" data-c="open" data-id="'+esc(u)+'">Abrir</button><button class="x" data-c="delAluno" data-id="'+esc(u)+'" style="color:var(--danger)">Excluir</button></div></div></div>';
   }).join('');
  } else {
@@ -621,7 +674,45 @@ function viewC(){
  if(open && D.perfis[open]){
   const u=open,R=rts(u),best={};
   hist(u).forEach(h=>h.ex.forEach(x=>work(x.s).forEach(s=>{const v=e1(s.kg,s.r);if(!best[x.e]||v>best[x.e])best[x.e]=v})));
-  h='<button class="x" data-c="back">← Todos os alunos</button><h2 style="margin-top:4px;font-size:1.4rem">'+esc(D.perfis[u].n)+'</h2><h2>Rotinas</h2>';
+  
+  const anam = D.anamnese[u] || {};
+  let imcText = '–';
+  if(anam.alt && anam.peso){
+    const imc = anam.peso / (anam.alt * anam.alt);
+    let classif = '';
+    if(imc < 18.5) classif = 'Abaixo do peso';
+    else if(imc < 25) classif = 'Peso normal';
+    else if(imc < 30) classif = 'Sobrepeso';
+    else classif = 'Obesidade';
+    imcText = fmt(imc) + ' (' + classif + ')';
+  }
+
+  h='<button class="x" data-c="back">← Todos os alunos</button><h2 style="margin-top:4px;font-size:1.4rem">'+esc(D.perfis[u].n)+'</h2>';
+  
+  // Card de Anamnese e IMC
+  h+='<div class="card"><h3>📊 Anamnese e Avaliação</h3>'+
+     '<div style="margin-top:8px; display:grid; gap:4px; font-size:0.9rem">'+
+     '<div><b>Altura:</b> '+(anam.alt?anam.alt+' m':'Não informada')+'</div>'+
+     '<div><b>Peso atual:</b> '+(anam.peso?anam.peso+' kg':'Não informado')+'</div>'+
+     '<div><b>IMC:</b> <span style="color:var(--pri)">'+imcText+'</span></div>'+
+     '<div><b>Objetivo:</b> '+(anam.obj||'Não informado')+'</div>'+
+     '<div><b>Frequência desejada:</b> '+(anam.dias||'Não informada')+'</div>'+
+     '<div><b>Tempo por sessão:</b> '+(anam.tempo||'Não informado')+'</div>'+
+     '<div><b>Dores articulares:</b> <span style="color:'+(anam.dor&&anam.dor.toLowerCase()!=='nenhuma'?'var(--danger)':'var(--ok)')+'">'+(anam.dor||'Nenhuma relatada')+'</span></div>'+
+     '</div></div>';
+
+  // Tabela de Evolução / Melhora
+  const hList = hist(u);
+  h+='<h2>📈 Tabela de Melhora / Histórico</h2>'+
+     '<div class="card" style="overflow-x:auto">'+
+     (hList.length ? '<table style="font-size:0.85rem"><tr><th>Data</th><th>Treino</th><th>Duração</th><th>Volume Total</th><th>PSE</th></tr>'+
+      hList.map(w=>{
+        const vol = w.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*s.r,0),0);
+        return '<tr><td>'+dt(w.d)+'</td><td><b>'+esc(w.n)+'</b></td><td>'+mmss(w.dur)+'</td><td>'+fmt(vol)+' kg</td><td>'+(w.pse!=null?w.pse+'/10':'–')+'</td></tr>';
+      }).join('')+'</table>' : '<span class="mu">Nenhum treino registrado ainda para gerar tabela.</span>')+
+     '</div>';
+
+  h+='<h2>Rotinas</h2>';
   if(ed){
    h+='<div class="card"><input class="t" data-ed="n" value="'+esc(ed.n)+'" placeholder="Nome da rotina (ex: Treino A - Superior)">'+
    ed.ex.map((x,i)=>'<div class="edr"><input class="t" list="exl" data-i="'+i+'" data-f="e" value="'+esc(x.e)+'" placeholder="Nome do exercício">'+
@@ -637,13 +728,10 @@ function viewC(){
  $('vt').innerHTML=h;
 }
 
-$('vt').addEventListener('change',e=>{
- const t=e.target;
- if(t.dataset.c==='chk'){
-  D.checks[t.dataset.id]=t.checked;
-  save();
- }
-});
+function toggleCheck(u, status){
+ D.checks[u] = status;
+ save();
+}
 
 $('vt').addEventListener('input',e=>{const t=e.target;if(!ed)return;if(t.dataset.ed)ed.n=t.value;else if(t.dataset.f){const x=ed.ex[t.dataset.i];x[t.dataset.f]=t.dataset.f==='k'?(parseInt(t.value)||1):t.value}});
 $('vt').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;const c=b.dataset.c,id=b.dataset.id,i=b.dataset.i,u=open;
@@ -668,6 +756,7 @@ $('vt').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)
    delete D.treinos[id];
    delete D.rotinas[id];
    delete D.checks[id];
+   delete D.anamnese[id];
    save();
    open=null;
    view();
