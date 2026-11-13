@@ -625,7 +625,22 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   </div>
  </section>
  <section id="v0" hidden>
-  <div class="card" style="border-left: 3px solid var(--acc);">
+  <h2>Meus treinos</h2>
+  <div id="rt"></div>
+
+  <div id="cooperSectionAluno" hidden>
+    <div class="card" style="border-left: 3px solid var(--pri);">
+      <h3 style="color:var(--pri)">🏃 Teste de Cooper (12 minutos)</h3>
+      <p class="mu" style="margin-top:4px">Corra a maior distância possível em 12 minutos e registre abaixo para a IA calcular suas zonas de treino aeróbico.</p>
+      <div style="display:grid; grid-template-columns: 1fr auto; gap:10px; margin-top:10px">
+        <input class="t" id="cooperDist" type="number" placeholder="Distância em metros (ex: 2400)">
+        <button class="btn s t" data-cooper="salvar">Registrar Teste</button>
+      </div>
+      <div id="cooperZonasRes" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <div class="card" style="border-left: 3px solid var(--acc); margin-top: 20px;">
     <h3 style="color:var(--acc)">💧 Hábitos & Hidratação Diária</h3>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px">
       <div>
@@ -639,19 +654,6 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
     </div>
     <button class="btn s t" style="margin-top:10px; width:100%" data-hab="salvar">Salvar Hábitos de Hoje</button>
   </div>
-
-  <div class="card" style="border-left: 3px solid var(--pri);">
-    <h3 style="color:var(--pri)">🏃 Teste de Cooper (12 minutos)</h3>
-    <p class="mu" style="margin-top:4px">Corra a maior distância possível em 12 minutos e registre abaixo para a IA calcular suas zonas de treino aeróbico.</p>
-    <div style="display:grid; grid-template-columns: 1fr auto; gap:10px; margin-top:10px">
-      <input class="t" id="cooperDist" type="number" placeholder="Distância em metros (ex: 2400)">
-      <button class="btn s t" data-cooper="salvar">Registrar Teste</button>
-    </div>
-    <div id="cooperZonasRes" style="margin-top:12px"></div>
-  </div>
-
-  <h2>Minhas rotinas</h2>
-  <div id="rt"></div>
  </section>
  <section id="v1" hidden><h2>Histórico</h2><div id="hs"></div></section>
  <section id="v2" hidden>
@@ -660,9 +662,11 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   <div class="st"><div><b id="p1">–</b><span class="mu">Melhor 1RM est.</span></div><div><b id="p2">–</b><span class="mu">Maior carga</span></div><div><b id="p3">–</b><span class="mu">Treinos</span></div></div>
   <div class="card" id="ch"></div>
 
-  <h2 style="margin-top:24px">🏃 Evolução do Teste de Cooper & Zonas</h2>
-  <div class="st"><div><b id="cpMaxDist">–</b><span class="mu">Maior Distância</span></div><div><b id="cpMaxVo2">–</b><span class="mu">Melhor VO2máx</span></div><div><b id="cpTotalTests">–</b><span class="mu">Testes Feitos</span></div></div>
-  <div class="card" id="cpHistoryCard"></div>
+  <div id="cooperProgressoContainer" hidden>
+    <h2 style="margin-top:24px">🏃 Evolução do Teste de Cooper & Zonas</h2>
+    <div class="st"><div><b id="cpMaxDist">–</b><span class="mu">Maior Distância</span></div><div><b id="cpMaxVo2">–</b><span class="mu">Melhor VO2máx</span></div><div><b id="cpTotalTests">–</b><span class="mu">Testes Feitos</span></div></div>
+    <div class="card" id="cpHistoryCard"></div>
+  </div>
  </section>
  <section id="vt" hidden></section>
 </main>
@@ -720,7 +724,7 @@ const BANCO_EXER_PADRAO = [
 
 let BANCO_EXER = JSON.parse(localStorage.getItem('reis_banco_exer')) || BANCO_EXER_PADRAO;
 
-let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}, habitos:{}, cooper:{}, templates:{}, financeiro:{}};
+let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}, habitos:{}, cooper:{}, cooperHabilitado:{}, templates:{}, financeiro:{}};
 let isLoaded = false; 
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -778,6 +782,7 @@ async function loadFromCloud(){
         corrida: { ...cloudData.corrida, ...(D.corrida || {}) },
         habitos: { ...cloudData.habitos, ...(D.habitos || {}) },
         cooper: { ...cloudData.cooper, ...(D.cooper || {}) },
+        cooperHabilitado: { ...cloudData.cooperHabilitado, ...(D.cooperHabilitado || {}) },
         templates: { ...cloudData.templates, ...(D.templates || {}) },
         financeiro: { ...cloudData.financeiro, ...(D.financeiro || {}) }
       };
@@ -964,7 +969,14 @@ function viewA(){
  if($('habAgua')) $('habAgua').value = habHoje.agua !== undefined ? habHoje.agua : '';
  if($('habSono')) $('habSono').value = habHoje.sono !== undefined ? habHoje.sono : '';
 
- renderZonasCooperAluno();
+ const cooperHabilitadoParaAluno = D.cooperHabilitado && D.cooperHabilitado[me];
+ if($('cooperSectionAluno')) $('cooperSectionAluno.hidden = !cooperHabilitadoParaAluno';
+ if($('cooperProgressoContainer')) $('cooperProgressoContainer.hidden = !cooperHabilitadoParaAluno';
+
+ if(cooperHabilitadoParaAluno){
+   renderZonasCooperAluno();
+   renderProgressoCooperAluno();
+ }
 
  $('rt').innerHTML = (R.length?R.map(r=>{
    const isRun = r.tipo === 'corrida';
@@ -983,7 +995,6 @@ function viewA(){
  $('sel').innerHTML=L.map(e=>'<option'+(e===cur?' selected':'')+'>'+esc(e)+'</option>').join('');
  
  renderProgressoAluno();
- renderProgressoCooperAluno();
 }
 
 document.addEventListener('click', async e => {
@@ -1547,6 +1558,13 @@ function setCoachTab(tabName){
   viewC();
 }
 
+async function toggleCooperAluno(u, status){
+  if(!D.cooperHabilitado) D.cooperHabilitado = {};
+  D.cooperHabilitado[u] = status;
+  await savePartial('cooperHabilitado', u, status);
+  view();
+}
+
 function exportarDadosCSV(){
   let csvContent = "data:text/csv;charset=utf-8,ID_Aluno;Nome;Valor_Mensalidade;Total_Treinos_Historico\n";
   const ids = Object.keys(D.perfis || {});
@@ -1973,6 +1991,7 @@ function viewC(){
   }
 
   const cooperList = (D.cooper && D.cooper[u]) || [];
+  const cooperHab = D.cooperHabilitado && D.cooperHabilitado[u];
   const pacesCoach = calcularPacesCooper(u);
   let cooperCoachHtml = '<p class="mu">Nenhum teste de Cooper registrado.</p>';
   if(cooperList.length){
@@ -2001,7 +2020,12 @@ function viewC(){
      '<div><b>Dores articulares:</b> <span style="color:'+(anam.dor&&anam.dor.toLowerCase()!=='nenhuma'?'var(--danger)':'var(--ok)')+'">'+(anam.dor||'Nenhuma relatada')+'</span></div>'+
      '</div></div>';
 
-  h+='<div class="card"><h3>🏃 Teste de Cooper & Ritmos</h3><div style="margin-top:8px">'+cooperCoachHtml+'</div></div>';
+  h+='<div class="card"><h3>🏃 Teste de Cooper & Zonas</h3>' +
+     '<div style="margin: 12px 0; display:flex; align-items:center; gap:10px">' +
+     '<input type="checkbox" id="chkHabCooper" '+(cooperHab?'checked':'')+' onchange="toggleCooperAluno(\''+u+'\', this.checked)" style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer">' +
+     '<label for="chkHabCooper" style="font-weight:700; cursor:pointer">Habilitar Teste de Cooper para este aluno</label>' +
+     '</div>' +
+     '<div style="margin-top:8px">'+cooperCoachHtml+'</div></div>';
 
   h+='<h2>Rotinas de Treino</h2>';
   if(ed){
@@ -2294,6 +2318,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
    if(D.corrida) delete D.corrida[id];
    if(D.habitos) delete D.habitos[id];
    if(D.cooper) delete D.cooper[id];
+   if(D.cooperHabilitado) delete D.cooperHabilitado[id];
    if(D.financeiro) delete D.financeiro[id];
    await save();
    open=null;
