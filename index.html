@@ -94,7 +94,7 @@ body{
 }
 .seg button.on{background:var(--pri);color:var(--on-pri);font-weight:700}
 
-main{max-width:640px;margin:0 auto;padding:20px 16px}
+main{max-width:680px;margin:0 auto;padding:20px 16px}
 h2{font-size:1.15rem;font-weight:700;margin:24px 0 12px;letter-spacing:-.01em}
 h2:first-child{margin-top:0}
 
@@ -215,21 +215,6 @@ h2:first-child{margin-top:0}
   border-radius:9999px;
 }
 
-.prog-container{
-  background:var(--ln);
-  height:4px;
-  width:100%;
-  position:sticky;
-  top:57px;
-  z-index:4;
-}
-.prog-bar{
-  background:var(--ok);
-  height:100%;
-  width:0%;
-  transition:width .3s ease;
-}
-
 .rest{
   position:fixed;
   bottom:calc(20px + env(safe-area-inset-bottom,0px));
@@ -260,27 +245,27 @@ h2:first-child{margin-top:0}
 
 table{width:100%;border-collapse:separate;border-spacing:0 8px;margin-top:6px}
 th{
-  font-size:.68rem;
+  font-size:.65rem;
   color:var(--mu2);
   text-transform:uppercase;
-  letter-spacing:.06em;
+  letter-spacing:.04em;
   font-weight:700;
   text-align:center;
-  padding:0 4px 2px;
+  padding:0 2px 2px;
 }
-td{padding:2px 3px;text-align:center;vertical-align:middle}
+td{padding:2px 2px;text-align:center;vertical-align:middle}
 tr.d td{opacity:.95}
 td input{
   width:100%;
-  max-width:82px;
+  max-width:70px;
   height:38px;
   text-align:center;
-  padding:4px 8px;
+  padding:4px 4px;
   border:1px solid transparent;
   border-radius:10px;
   background:var(--pill);
   color:var(--tx);
-  font-size:.95rem;
+  font-size:.9rem;
   font-weight:700;
   font-family:inherit;
   font-variant-numeric:tabular-nums;
@@ -299,13 +284,13 @@ td input.readonly-presc {
 }
 
 .ty{
-  width:32px;
-  height:32px;
+  width:30px;
+  height:30px;
   border-radius:50%;
   border:0;
   background:var(--pill);
   color:var(--mu);
-  font-size:.82rem;
+  font-size:.78rem;
   cursor:pointer;
   font-weight:700;
   font-family:inherit;
@@ -314,13 +299,13 @@ td input.readonly-presc {
   justify-content:center;
 }
 .ck{
-  width:34px;
-  height:34px;
+  width:32px;
+  height:32px;
   border-radius:10px;
   border:1.5px solid var(--ln2);
   background:var(--pill);
   color:var(--mu);
-  font-size:.95rem;
+  font-size:.9rem;
   cursor:pointer;
   font-weight:700;
   font-family:inherit;
@@ -853,6 +838,19 @@ async function loadFromCloud(){
       save();
     }
   }
+
+  const savedW = localStorage.getItem('reis_treino_ativo_' + me);
+  if(savedW && !W){
+    try {
+      const parsed = JSON.parse(savedW);
+      if(parsed && parsed.ex){
+        W = parsed;
+        tk = setInterval(()=>{ W.dur++; if($('wt-t')) $('wt-t').textContent = mmss(W.dur); saveActiveWorkout(); }, 1000);
+        renderW();
+      }
+    } catch(err){ console.error("Erro ao restaurar treino ativo", err); }
+  }
+
   view();
 }
 
@@ -860,6 +858,12 @@ async function save(){
   try {
     await db.collection('app').doc('reis_db').set(D);
   } catch(e){ console.error("Erro ao salvar nuvem", e); }
+}
+
+function saveActiveWorkout(){
+  if(W && me){
+    localStorage.setItem('reis_treino_ativo_' + me, JSON.stringify(W));
+  }
 }
 
 const hist=u=>(D.treinos[u]&&D.treinos[u].h)||[],rts=u=>(D.rotinas[u]&&D.rotinas[u].rt)||[],cms=u=>(D.coment[u]&&D.coment[u].c)||{};
@@ -931,12 +935,12 @@ function view(){
 
 function histHTML(h,o){return h.length?h.map(w=>{
   const isRun = w.tipo === 'corrida';
-  const vol = isRun ? 0 : w.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*s.r,0),0);
+  const vol = isRun ? 0 : w.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*(s.rf||s.r||0),0),0);
   const cm=(o.cm||{})[w.id];
   return '<div class="card"><h3>'+(isRun?'🏃 ':'🏋️ ')+esc(w.n)+'</h3><div class="mu">'+dt(w.d)+' · '+mmss(w.dur)+(isRun?'':' · volume '+fmt(vol)+' kg')+'</div>'+ckHTML(w)+'<div style="margin-top:10px;font-size:.88rem;display:grid;gap:4px">'+
   (isRun 
     ? w.ex.map(x=>'<div><b>'+esc(x.e)+'</b> <span class="mu">('+esc(x.zona||'Livre')+' · Alvo: '+esc(x.alvo||'-')+') — Realizado: <b>'+esc(x.realizado||'Concluído')+'</b></span></div>').join('')
-    : w.ex.map(x=>'<div><b>'+esc(x.e)+'</b> <span class="mu">'+x.s.map(s=>(s.t&&s.t!=='N'?'<b style="color:var(--pri)">'+s.t+'</b> ':'')+fmt(s.kg)+'×'+s.r+(s.rpe?' (RPE '+s.rpe+')':'')).join(' · ')+'</span>'+(x.nota?'<div class="mu" style="color:var(--acc);margin-top:2px">💬 Nota: '+esc(x.nota)+'</div>':'')+(x.videoAluno?'<div style="margin-top:2px"><a class="vd" href="'+esc(x.videoAluno)+'" target="_blank" rel="noopener">▶ Ver vídeo do aluno</a></div>':'')+'</div>').join('')
+    : w.ex.map(x=>'<div><b>'+esc(x.e)+'</b> <span class="mu">'+x.s.map(s=>(s.t&&s.t!=='N'?'<b style="color:var(--pri)">'+s.t+'</b> ':'')+fmt(s.kg)+'×'+(s.rf!==undefined&&s.rf!==''?s.rf:s.r)+' (RPE Exec: '+(s.rpef!==undefined&&s.rpef!==''?s.rpef:'-')+')').join(' · ')+'</span>'+(x.nota?'<div class="mu" style="color:var(--acc);margin-top:2px">💬 Nota: '+esc(x.nota)+'</div>':'')+(x.videoAluno?'<div style="margin-top:2px"><a class="vd" href="'+esc(x.videoAluno)+'" target="_blank" rel="noopener">▶ Ver vídeo do aluno</a></div>':'')+'</div>').join('')
   )+'</div>'+
  (o.coach?'<textarea class="t" id="c'+w.id+'" rows="2" style="margin-top:10px" placeholder="Comentário para o aluno…">'+esc(cm||'')+'</textarea><button class="btn s g" style="margin-top:8px" data-c="cm" data-w="'+w.id+'">Salvar comentário</button>':(cm?'<div class="cm">💬 Treinador: '+esc(cm)+'</div>':''))+
  (o.del?'<button class="x" style="margin-top:6px" data-h="'+w.id+'">Apagar</button>':'')+'</div>'}).join(''):'<p class="mu">Nenhum treino finalizado ainda.</p>'}
@@ -997,7 +1001,17 @@ function start(r){
     dur: 0,
     ex: JSON.parse(JSON.stringify(r.ex))
   };
-  tk = setInterval(()=>{ W.dur++; if($('wt-t')) $('wt-t').textContent = mmss(W.dur); }, 1000);
+  // Inicializa campos feitos do aluno se não existirem
+  W.ex.forEach(x=>{
+    if(x.s){
+      x.s.forEach(s=>{
+        if(s.rf === undefined) s.rf = s.r || '';
+        if(s.rpef === undefined) s.rpef = s.rpe || '';
+      });
+    }
+  });
+  saveActiveWorkout();
+  tk = setInterval(()=>{ W.dur++; if($('wt-t')) $('wt-t').textContent = mmss(W.dur); saveActiveWorkout(); }, 1000);
   renderW();
 }
 
@@ -1015,7 +1029,7 @@ function renderW(){
   if(isRun){
     h += `<div class="card"><h3>Registro de Corrida</h3>`;
     w.ex.forEach((x, i)=>{
-      h += `<div style="margin-top:12px"><label class="mu" style="font-size:0.75rem"><b>${esc(x.e)}</b> (Alvo: ${esc(x.dist||'-')} · ${esc(x.zona||'Z2')})</label><input class="t" id="run_res_${i}" placeholder="Ex: Feito 5.2 km em 28 min" style="margin-top:4px" value="${esc(x.realizado||'')}"></div>`;
+      h += `<div style="margin-top:12px"><label class="mu" style="font-size:0.75rem"><b>${esc(x.e)}</b> (Alvo: ${esc(x.dist||'-')} · ${esc(x.zona||'Z2')})</label><input class="t" id="run_res_${i}" placeholder="Ex: Feito 5.2 km em 28 min" style="margin-top:4px" value="${esc(x.realizado||'')}" oninput="W.ex[${i}].realizado=this.value;saveActiveWorkout()"></div>`;
     });
     h += `</div>`;
   } else {
@@ -1026,29 +1040,31 @@ function renderW(){
           ${x.v ? '<a class="vd" href="'+esc(x.v)+'" target="_blank" rel="noopener">▶ Vídeo</a>' : ''}
         </div>
         <table>
-          <tr><th>Série</th><th>Kg</th><th>Reps (Alvo)</th><th>RPE (Alvo)</th><th>Ação</th></tr>`;
+          <tr><th>S</th><th>Kg</th><th>Reps (Alvo)</th><th>Reps (Feito)</th><th>RPE (Alvo)</th><th>RPE (Feito)</th><th>Ok</th></tr>`;
       
       x.s.forEach((s, si)=>{
         h += `<tr class="${s.done?'d':''}">
           <td><button class="ty ${s.t==='A'?'tA':s.t==='F'?'tF':s.t==='D'?'tD':''}" onclick="toggleSérieTipo(${xi}, ${si})">${s.t||(si+1)}</button></td>
-          <td><input type="number" step="0.5" value="${s.kg!==undefined?s.kg:''}" oninput="W.ex[${xi}].s[${si}].kg=parseFloat(this.value)||0"></td>
+          <td><input type="number" step="0.5" value="${s.kg!==undefined?s.kg:''}" oninput="W.ex[${xi}].s[${si}].kg=parseFloat(this.value)||0;saveActiveWorkout()"></td>
           <td><input type="text" class="readonly-presc" value="${esc(s.r!==undefined?s.r:'')}" readonly tabindex="-1" title="Prescrito pelo treinador"></td>
-          <td><input type="text" class="readonly-presc" value="${esc(s.rpe!==undefined?s.rpe:'')}" readonly tabindex="-1" title="Prescrito pelo treinador" style="max-width:50px"></td>
+          <td><input type="text" value="${esc(s.rf!==undefined?s.rf:(s.r||''))}" oninput="W.ex[${xi}].s[${si}].rf=this.value;saveActiveWorkout()"></td>
+          <td><input type="text" class="readonly-presc" value="${esc(s.rpe!==undefined?s.rpe:'')}" readonly tabindex="-1" title="Prescrito pelo treinador" style="max-width:45px"></td>
+          <td><input type="text" value="${esc(s.rpef!==undefined?s.rpef:(s.rpe||''))}" oninput="W.ex[${xi}].s[${si}].rpef=this.value;saveActiveWorkout()" style="max-width:45px"></td>
           <td><button class="ck" onclick="toggleSérieDone(${xi}, ${si}, ${x.descanso||90})">✓</button></td>
         </tr>`;
       });
       
       h += `</table>
         <div style="margin-top:10px">
-          <input class="t" placeholder="Nota ou observação para o treinador..." value="${esc(x.nota||'')}" oninput="W.ex[${xi}].nota=this.value">
-          <input class="t" placeholder="Link do seu vídeo executando (opcional)" value="${esc(x.videoAluno||'')}" style="margin-top:6px" oninput="W.ex[${xi}].videoAluno=this.value">
+          <input class="t" placeholder="Nota ou observação para o treinador..." value="${esc(x.nota||'')}" oninput="W.ex[${xi}].nota=this.value;saveActiveWorkout()">
+          <input class="t" placeholder="Link do seu vídeo executando (opcional)" value="${esc(x.videoAluno||'')}" style="margin-top:6px" oninput="W.ex[${xi}].videoAluno=this.value;saveActiveWorkout()">
         </div>
       </div>`;
     });
   }
 
   h += `<button class="btn t" style="margin-top:20px" onclick="finalizarTreino()">Finalizar Treino</button>
-        <button class="btn g" style="margin-top:10px" onclick="if(confirm('Cancelar treino atual?')){clearInterval(tk);W=null;$('w').hidden=true;view()}">Cancelar Treino</button>
+        <button class="btn g" style="margin-top:10px" onclick="if(confirm('Cancelar treino atual?')){clearInterval(tk);W=null;localStorage.removeItem('reis_treino_ativo_'+me);$('w').hidden=true;view()}">Cancelar Treino</button>
         </main>`;
 
   $('w').innerHTML = h;
@@ -1060,12 +1076,14 @@ function toggleSérieTipo(xi, si){
   const s = W.ex[xi].s[si];
   const idx = tipos.indexOf(s.t);
   s.t = tipos[(idx + 1) % tipos.length];
+  saveActiveWorkout();
   renderW();
 }
 
 function toggleSérieDone(xi, si, tempoDescanso){
   const s = W.ex[xi].s[si];
   s.done = !s.done;
+  saveActiveWorkout();
   if(s.done && tempoDescanso > 0){
     rest = tempoDescanso;
     if(window.restTimer) clearInterval(window.restTimer);
@@ -1090,6 +1108,7 @@ async function finalizarTreino(){
   if(!D.treinos[me]) D.treinos[me] = {h: []};
   D.treinos[me].h.unshift(W);
   await save();
+  localStorage.removeItem('reis_treino_ativo_' + me);
   W = null;
   $('w').hidden = true;
   view();
@@ -1288,14 +1307,14 @@ function viewC(){
          </div>
          <div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Link do vídeo</label><input class="t" value="${esc(x.v||'')}" placeholder="https://..." oninput="edTpl.ex[${exerIdx}].v=this.value"></div>
          <div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Descanso (segundos)</label><input class="t" type="number" value="${esc(x.descanso||90)}" style="max-width:120px" oninput="edTpl.ex[${exerIdx}].descanso=this.value"></div>
-         <p class="mu" style="margin:10px 0 4px; font-weight:700">Prescrição por Série:</p>`;
+         <p class="mu" style="margin:10px 0 4px; font-weight:700">Prescrição por Série (Alvo):</p>`;
          
        x.s.forEach((s, si)=>{
          h += `<div style="display:flex; gap:6px; align-items:center; margin-bottom:6px">
            <span class="mu" style="font-size:0.75rem; width:45px">Série ${si+1}</span>
            <input class="t" type="number" step="0.5" value="${esc(s.kg!==undefined?s.kg:'')}" placeholder="Kg" style="padding:6px; min-height:36px; text-align:center" oninput="edTpl.ex[${exerIdx}].s[${si}].kg=this.value">
-           <input class="t" type="text" value="${esc(s.r!==undefined?s.r:'')}" placeholder="Reps" style="padding:6px; min-height:36px; text-align:center" oninput="edTpl.ex[${exerIdx}].s[${si}].r=this.value">
-           <input class="t" type="text" value="${esc(s.rpe!==undefined?s.rpe:'')}" placeholder="RPE" style="padding:6px; min-height:36px; text-align:center; max-width:65px" oninput="edTpl.ex[${exerIdx}].s[${si}].rpe=this.value">
+           <input class="t" type="text" value="${esc(s.r!==undefined?s.r:'')}" placeholder="Reps Alvo" style="padding:6px; min-height:36px; text-align:center" oninput="edTpl.ex[${exerIdx}].s[${si}].r=this.value">
+           <input class="t" type="text" value="${esc(s.rpe!==undefined?s.rpe:'')}" placeholder="RPE Alvo" style="padding:6px; min-height:36px; text-align:center; max-width:65px" oninput="edTpl.ex[${exerIdx}].s[${si}].rpe=this.value">
            <button class="x" onclick="edTpl.ex[${exerIdx}].s.splice(${si},1);view()" style="color:var(--danger); padding:4px 8px">✕</button>
          </div>`;
        });
@@ -1435,13 +1454,13 @@ function viewC(){
        '</div>'+
        '<div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Link do vídeo</label><input class="t" type="text" data-ex="'+exerIdx+'" data-f="v" value="'+esc(x.v||'')+'" placeholder="https://..."></div>'+
        '<div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Descanso (segundos)</label><input class="t" type="number" data-ex="'+exerIdx+'" data-f="descanso" value="'+esc(x.descanso||90)+'" style="max-width:120px"></div>'+
-       '<p class="mu" style="margin:10px 0 4px; font-weight:700">Prescrição por Série:</p>'+
+       '<p class="mu" style="margin:10px 0 4px; font-weight:700">Prescrição por Série (Alvo):</p>'+
        (x.s && x.s.length ? x.s.map((s,si)=>
          '<div style="display:flex; gap:6px; align-items:center; margin-bottom:6px">'+
          '<span class="mu" style="font-size:0.75rem; width:45px">Série '+(si+1)+'</span>'+
          '<input class="t" type="number" step="0.5" data-ex="'+exerIdx+'" data-s="'+si+'" data-sf="kg" value="'+esc(s.kg!==undefined?s.kg:'')+'" placeholder="Kg" style="padding:6px; min-height:36px; text-align:center">'+
-         '<input class="t" type="text" data-ex="'+exerIdx+'" data-s="'+si+'" data-sf="r" value="'+esc(s.r!==undefined?s.r:'')+'" placeholder="Reps" style="padding:6px; min-height:36px; text-align:center">'+
-         '<input class="t" type="text" data-ex="'+exerIdx+'" data-s="'+si+'" data-sf="rpe" value="'+esc(s.rpe!==undefined?s.rpe:'')+'" placeholder="RPE" style="padding:6px; min-height:36px; text-align:center; max-width:65px">'+
+         '<input class="t" type="text" data-ex="'+exerIdx+'" data-s="'+si+'" data-sf="r" value="'+esc(s.r!==undefined?s.r:'')+'" placeholder="Reps Alvo" style="padding:6px; min-height:36px; text-align:center">'+
+         '<input class="t" type="text" data-ex="'+exerIdx+'" data-s="'+si+'" data-sf="rpe" value="'+esc(s.rpe!==undefined?s.rpe:'')+'" placeholder="RPE Alvo" style="padding:6px; min-height:36px; text-align:center; max-width:65px">'+
          '<button class="x" data-c="rmS" data-ex="'+exerIdx+'" data-si="'+si+'" style="color:var(--danger); padding:4px 8px">✕</button>'+
          '</div>'
        ).join('') : '')+
@@ -1545,7 +1564,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   let totalVolumeKg = 0;
   hList.forEach(w=>{
     if(w.tipo !== 'corrida'){
-      totalVolumeKg += w.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*s.r,0),0);
+      totalVolumeKg += w.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*(s.rf||s.r||0),0),0);
     }
   });
   const element = document.createElement('div');
