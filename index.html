@@ -437,8 +437,13 @@ input[type=range]{width:100%;accent-color:var(--pri)}
 <body>
 <div class="top"><div class="r"><h1>Reis <span>Personal</span></h1><div class="seg" id="seg"><button data-m="0" id="btnAluno">Aluno</button><button data-m="1" id="btnCoach">Treinador</button></div></div><div id="who" class="mu"></div></div>
 <main id="app">
- <section id="vn" hidden><div class="card"><h3>Bem-vindo(a)!</h3><p class="mu">Como você quer aparecer para o seu treinador?</p><input class="t" id="nm" placeholder="Seu nome (ex: Otávio)"><button class="btn" style="margin-top:12px" id="nmb">Continuar</button></div></section>
- <section id="v0" hidden><button class="btn" id="empty">+ Iniciar treino vazio</button><h2>Minhas rotinas</h2><div id="rt"></div></section>
+ <section id="vn" hidden>
+  <div class="card">
+   <h3>Link Inválido ou Aluno não encontrado</h3>
+   <p class="mu" style="margin-top:8px">Este link de acesso não é válido ou o treinador ainda não cadastrou este perfil. Solicite o link correto ao seu treinador.</p>
+  </div>
+ </section>
+ <section id="v0" hidden><h2>Minhas rotinas</h2><div id="rt"></div></section>
  <section id="v1" hidden><h2>Histórico</h2><div id="hs"></div></section>
  <section id="v2" hidden><h2>Progresso</h2><select id="sel"></select>
   <div class="st"><div><b id="p1">–</b><span class="mu">Melhor 1RM est.</span></div><div><b id="p2">–</b><span class="mu">Maior carga</span></div><div><b id="p3">–</b><span class="mu">Treinos</span></div></div>
@@ -454,14 +459,29 @@ const fmt=n=>(Math.round(n*10)/10).toString().replace('.',','),e1=(l,r)=>r<=1?l:
 const mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0'),dt=d=>d.split('-').reverse().slice(0,2).join('/');
 const work=s=>s.filter(x=>x.t!=='A');
 
-let D = JSON.parse(localStorage.getItem('reis_db') || '{"perfis":{},"treinos":{},"rotinas":{},"coment":{}}');
-let me = localStorage.getItem('reis_me') || 'aluno_' + Math.random().toString(36).substring(2, 9);
-localStorage.setItem('reis_me', me);
+let D = JSON.parse(localStorage.getItem('reis_db') || '{"perfis":{},"treinos":{},"rotinas":{},"coment":{},"checks":{}}');
+if(!D.checks) D.checks = {};
 
-let coachView = localStorage.getItem('reis_coach') === '1', tab = 0, W = null, tk = null, rest = 0, ed = null, open = null;
+const urlParams = new URLSearchParams(window.location.search);
+let urlAluno = urlParams.get('aluno');
+let me = urlAluno ? ('aluno_' + urlAluno.toLowerCase().replace(/[^a-z0-9]/g, '_')) : '';
+
+let coachView = !urlAluno && localStorage.getItem('reis_coach') === '1', tab = 0, W = null, tk = null, rest = 0, ed = null, open = null;
 
 function save(){ localStorage.setItem('reis_db', JSON.stringify(D)); }
 const hist=u=>(D.treinos[u]&&D.treinos[u].h)||[],rts=u=>(D.rotinas[u]&&D.rotinas[u].rt)||[],cms=u=>(D.coment[u]&&D.coment[u].c)||{};
+
+if(urlAluno){
+  let nomeFormatado = urlAluno.charAt(0).toUpperCase() + urlAluno.slice(1);
+  if(!D.perfis[me]) {
+    D.perfis[me] = {n: nomeFormatado};
+    save();
+  }
+}
+
+if(urlAluno){
+  $('seg').style.display = 'none';
+}
 
 $('seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
  const m = b.dataset.m;
@@ -477,11 +497,10 @@ $('seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
 });
 
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{tab=+b.dataset.v;view()});
-$('nmb').onclick=()=>{const n=$('nm').value.trim();if(!n)return;D.perfis[me]={n};save();view()};
 
 function view(){
  coachView ? $('btnCoach').classList.add('on') : $('btnAluno').classList.add('on');
- const needName = !coachView && (!D.perfis[me] || !D.perfis[me].n);
+ const needName = !coachView && (!urlAluno || !D.perfis[me]);
  $('vn').hidden = !needName; $('vt').hidden = !coachView; $('tabs').hidden = coachView || needName;
  [0,1,2].forEach(i=>$('v'+i).hidden = coachView || needName || i!==tab);
  document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on', +x.dataset.v===tab));
@@ -521,14 +540,13 @@ function drawPse(){const L=['Repouso','Muito fácil','Fácil','Moderado','Um pou
 
 function viewA(){
  const R=rts(me);
- $('rt').innerHTML=R.length?R.map(r=>'<div class="card"><h3>'+esc(r.n)+'</h3><div class="mu" style="margin-top:2px">'+r.ex.map(x=>esc(x.e)+' ('+x.k+'×)').join(' · ')+'</div><button class="btn s t" style="margin-top:12px" data-r="'+r.id+'">Iniciar rotina</button></div>').join(''):'<p class="mu">Seu treinador ainda não montou rotinas para você. Você já pode registrar um treino vazio.</p>';
+ $('rt').innerHTML=R.length?R.map(r=>'<div class="card"><h3>'+esc(r.n)+'</h3><div class="mu" style="margin-top:2px">'+r.ex.map(x=>esc(x.e)+' ('+x.k+'×)').join(' · ')+'</div><button class="btn s t" style="margin-top:12px" data-r="'+r.id+'">Iniciar rotina</button></div>').join(''):'<p class="mu">Seu treinador ainda não montou rotinas para você.</p>';
  document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const r=R.find(x=>x.id==b.dataset.r);start(r.n,r.ex)});
  $('hs').innerHTML=histHTML(hist(me),{del:1,cm:cms(me)});
  document.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{const h=hist(me).filter(w=>w.id!=b.dataset.h);D.treinos[me]={h};save();view()});
  const cur=$('sel').value,L=[...new Set(hist(me).flatMap(h=>h.ex.map(x=>x.e)))].sort();
  $('sel').innerHTML=L.map(e=>'<option'+(e===cur?' selected':'')+'>'+esc(e)+'</option>').join('');chart();
 }
-$('empty').onclick=()=>start('Treino livre',[]);
 
 function prev(e,i){for(const h of hist(me)){const x=h.ex.find(y=>y.e===e);if(x&&x.s[i])return x.s[i]}return null}
 function start(n,ex){W={n,ph:'ck',pse:null,ck:{rec:0,sono:0,dor:false,locs:[],int:3,obs:''},t0:Date.now(),ex:ex.map(x=>({e:x.e,v:x.v||'',s:Array.from({length:x.k},()=>({kg:'',r:'',d:false,t:'N'}))}))};
@@ -536,10 +554,10 @@ function start(n,ex){W={n,ph:'ck',pse:null,ck:{rec:0,sono:0,dor:false,locs:[],in
 function draw(){if(W.ph==='ck')return drawCk();if(W.ph==='pse')return drawPse();drawW()}
 function drawW(){
  $('w').innerHTML='<div class="wt"><button class="x" data-a="cancel">Cancelar</button><span class="wt-timer">⏱ <span id="tm">'+mmss(Math.floor((Date.now()-W.t0)/1000))+'</span></span><button class="btn s" style="margin:0" data-a="end">Finalizar</button></div><div class="rest" id="rs" '+(rest>0?'':'hidden')+'><span>'+mmss(rest)+'</span><button class="x" data-a="skip">Pular</button></div><div style="padding:4px 16px;max-width:640px;margin:0 auto"><h2 class="wt-title">'+esc(W.n)+'</h2><p class="mu" style="margin:0 0 14px">Toque no número da série para alternar: A aquecimento · F falha · D drop.</p>'+
- W.ex.map((x,xi)=>'<div class="card ex"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div><h3>'+esc(x.e)+'</h3>'+(x.v?'<a class="vd" href="'+esc(x.v)+'" target="_blank" rel="noopener">▶ Ver vídeo de execução</a>':'')+'</div><button class="x" data-a="rm" data-x="'+xi+'">✕</button></div><table><tr><th>Série</th><th>Anterior</th><th>Kg</th><th>Reps</th><th></th></tr>'+
+ W.ex.map((x,xi)=>'<div class="card ex"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div><h3>'+esc(x.e)+'</h3>'+(x.v?'<a class="vd" href="'+esc(x.v)+'" target="_blank" rel="noopener">▶ Ver vídeo de execução</a>':'')+'</div></div><table><tr><th>Série</th><th>Anterior</th><th>Kg</th><th>Reps</th><th></th></tr>'+
  x.s.map((s,i)=>{const p=prev(x.e,i),n=x.s.slice(0,i).filter(q=>q.t==='N').length+1;return '<tr class="'+(s.d?'d':'')+'"><td><button class="ty t'+s.t+'" data-a="ty" data-x="'+xi+'" data-i="'+i+'">'+(s.t==='N'?n:s.t)+'</button></td><td class="mu" style="font-variant-numeric:tabular-nums">'+(p?fmt(p.kg)+'×'+p.r:'–')+'</td><td><input inputmode="decimal" data-k="kg" data-x="'+xi+'" data-i="'+i+'" value="'+esc(s.kg)+'" placeholder="'+(p?fmt(p.kg):'')+'"></td><td><input inputmode="numeric" data-k="r" data-x="'+xi+'" data-i="'+i+'" value="'+esc(s.r)+'" placeholder="'+(p?p.r:'')+'"></td><td><button class="ck" data-a="ck" data-x="'+xi+'" data-i="'+i+'">✓</button></td></tr>'}).join('')+
  '</table><button class="btn g" style="margin-top:8px;padding:10px;min-height:40px;font-size:.85rem" data-a="ad" data-x="'+xi+'">+ Série</button></div>').join('')+
- '<input class="t" id="ne" list="exl" placeholder="Adicionar exercício..."><button class="btn t" style="margin-top:10px" data-a="ae">+ Adicionar exercício</button></div>'}
+ '</div>'}
 
 $('w').addEventListener('input',e=>{const t=e.target;if(t.dataset.k)W.ex[t.dataset.x].s[t.dataset.i][t.dataset.k]=t.value;else if(t.dataset.q==='int'){W.ck.int=+t.value;$('iv').textContent=t.value}else if(t.dataset.q==='obs')W.ck.obs=t.value});
 $('w').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||!W)return;const a=b.dataset.a,x=b.dataset.x,i=b.dataset.i;
@@ -552,8 +570,6 @@ $('w').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||
  else if(a==='ck'){const s=W.ex[x].s[i],p=prev(W.ex[x].e,i);if(!s.d){if(s.kg===''&&p)s.kg=p.kg;if(s.r===''&&p)s.r=p.r;if(s.kg===''||s.r==='')return;s.d=true;rest=90}else s.d=false;draw()}
  else if(a==='ty'){const s=W.ex[x].s[i],T=['N','A','F','D'];s.t=T[(T.indexOf(s.t)+1)%4];draw()}
  else if(a==='ad'){W.ex[x].s.push({kg:'',r:'',d:false,t:'N'});draw()}
- else if(a==='rm'){W.ex.splice(x,1);draw()}
- else if(a==='ae'){const v=$('ne').value.trim();if(v){W.ex.push({e:v,v:'',s:[{kg:'',r:'',d:false,t:'N'}]});draw()}}
  else if(a==='skip'){rest=0;$('rs').hidden=true}
  else if(a==='cancel')close_();
  else if(a==='end'){if(!W.ex.some(y=>y.s.some(s=>s.d))){close_();return}W.ph='pse';draw()}
@@ -574,24 +590,72 @@ $('sel').onchange=chart;
 
 function viewC(){
  const ids=Object.keys(D.perfis);
- if(!open||!D.perfis[open]){$('vt').innerHTML='<h2>Alunos</h2>'+(ids.length?ids.map(u=>'<div class="card"><h3>'+esc(D.perfis[u].n)+(u===me?' (você)':'')+'</h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)'+(hist(u)[0]?' · último em '+dt(hist(u)[0].d):'')+' · '+rts(u).length+' rotina(s)</div>'+(hist(u)[0]&&hist(u)[0].ck&&hist(u)[0].ck.dor?'<div class="bd warn">⚠ Dor relatada no último treino</div>':'')+'<button class="btn s" style="margin-top:12px" data-c="open" data-id="'+esc(u)+'">Abrir</button></div>').join(''):'<p class="mu">Nenhum aluno cadastrado ainda. Quando um aluno abrir o link e colocar o nome, ele aparecerá aqui.</p>');return}
- const u=open,R=rts(u),best={};
- hist(u).forEach(h=>h.ex.forEach(x=>work(x.s).forEach(s=>{const v=e1(s.kg,s.r);if(!best[x.e]||v>best[x.e])best[x.e]=v})));
- let h='<button class="x" data-c="back">← Todos os alunos</button><h2 style="margin-top:4px;font-size:1.4rem">'+esc(D.perfis[u].n)+'</h2><h2>Rotinas</h2>';
- if(ed){h+='<div class="card"><input class="t" data-ed="n" value="'+esc(ed.n)+'" placeholder="Nome da rotina">'+ed.ex.map((x,i)=>'<div class="edr"><input class="t" list="exl" data-i="'+i+'" data-f="e" value="'+esc(x.e)+'" placeholder="Exercício"><div class="two"><input class="t" type="number" min="1" data-i="'+i+'" data-f="k" value="'+x.k+'" placeholder="Séries"><input class="t" data-i="'+i+'" data-f="v" value="'+esc(x.v)+'" placeholder="Link do vídeo (opcional)"></div><button class="x" data-c="rmE" data-i="'+i+'">Remover exercício</button></div>').join('')+'<button class="btn g" style="margin-top:10px" data-c="addE">+ Exercício</button><div style="margin-top:12px"><button class="btn s" data-c="saveR">Salvar rotina</button><button class="btn s g" data-c="cancelR">Cancelar</button></div></div>'}
- else{h+=R.map(r=>'<div class="card"><h3>'+esc(r.n)+'</h3><div class="mu">'+r.ex.map(x=>esc(x.e)+' ('+x.k+'×)'+(x.v?' ▶':'')).join(' · ')+'</div><div style="margin-top:10px"><button class="btn s g" data-c="editR" data-id="'+r.id+'">Editar</button><button class="x" data-c="delR" data-id="'+r.id+'">Excluir</button></div></div>').join('')+'<button class="btn t" data-c="newR">+ Nova rotina</button>'}
- h+='<h2>Melhor 1RM estimado</h2><div class="card">'+(Object.keys(best).length?Object.keys(best).sort().map(k=>'<div style="display:flex;justify-content:space-between;padding:4px 0"><span>'+esc(k)+'</span><b style="color:var(--pri)">'+fmt(best[k])+' kg</b></div>').join(''):'<span class="mu">Sem registros ainda.</span>')+'<h2>O que o aluno registrou</h2>'+histHTML(hist(u),{coach:1,cm:cms(u)});
+ let h='<h2>Alunos Cadastrados</h2><button class="btn t" style="margin-bottom:16px" data-c="novoAluno">+ Adicionar Novo Aluno</button>';
+ if(ids.length){
+  h+=ids.map(u=>{
+   const checked = D.checks[u] ? 'checked' : '';
+   const nomeParam = D.perfis[u].n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+   const linkAluno = window.location.origin + window.location.pathname + '?aluno=' + nomeParam;
+   return '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'+
+   '<div style="display:flex;align-items:center;gap:10px"><input type="checkbox" data-c="chk" data-id="'+esc(u)+'" '+checked+' style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer"><div><h3>'+esc(D.perfis[u].n)+'</h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)'+(hist(u)[0]?' · último em '+dt(hist(u)[0].d):'')+' · '+rts(u).length+' rotina(s)</div>'+(hist(u)[0]&&hist(u)[0].ck&&hist(u)[0].ck.dor?'<div class="bd warn">⚠ Dor relatada no último treino</div>':'')+'<div style="margin-top:6px"><button class="btn s g" style="padding:6px 10px;font-size:.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link do Aluno</button></div></div></div>'+
+   '<div><button class="btn s" data-c="open" data-id="'+esc(u)+'">Abrir</button><button class="x" data-c="delAluno" data-id="'+esc(u)+'" style="color:var(--danger)">Excluir</button></div></div></div>';
+  }).join('');
+ } else {
+  h+='<div class="card"><p class="mu">Nenhum aluno cadastrado ainda. Clique em "+ Adicionar Novo Aluno" acima para começar.</p></div>';
+ }
+
+ if(open && D.perfis[open]){
+  const u=open,R=rts(u),best={};
+  hist(u).forEach(h=>h.ex.forEach(x=>work(x.s).forEach(s=>{const v=e1(s.kg,s.r);if(!best[x.e]||v>best[x.e])best[x.e]=v})));
+  h='<button class="x" data-c="back">← Todos os alunos</button><h2 style="margin-top:4px;font-size:1.4rem">'+esc(D.perfis[u].n)+'</h2><h2>Rotinas</h2>';
+  if(ed){h+='<div class="card"><input class="t" data-ed="n" value="'+esc(ed.n)+'" placeholder="Nome da rotina">'+ed.ex.map((x,i)=>'<div class="edr"><input class="t" list="exl" data-i="'+i+'" data-f="e" value="'+esc(x.e)+'" placeholder="Exercício"><div class="two"><input class="t" type="number" min="1" data-i="'+i+'" data-f="k" value="'+x.k+'" placeholder="Séries"><input class="t" type="number" step="any" data-i="'+i+'" data-f="v" value="'+esc(x.v)+'" placeholder="Link do vídeo (opcional)"></div><button class="x" data-c="rmE" data-i="'+i+'">Remover exercício</button></div>').join('')+'<button class="btn g" style="margin-top:10px" data-c="addE">+ Exercício</button><div style="margin-top:12px"><button class="btn s" data-c="saveR">Salvar rotina</button><button class="btn s g" data-c="cancelR">Cancelar</button></div></div>'}
+  else{h+=R.map(r=>'<div class="card"><h3>'+esc(r.n)+'</h3><div class="mu">'+r.ex.map(x=>esc(x.e)+' ('+x.k+'×)'+(x.v?' ▶':'')).join(' · ')+'</div><div style="margin-top:10px"><button class="btn s g" data-c="editR" data-id="'+r.id+'">Editar</button><button class="x" data-c="delR" data-id="'+r.id+'">Excluir</button></div></div>').join('')+'<button class="btn t" data-c="newR">+ Nova rotina</button>'}
+  h+='<h2>Melhor 1RM estimado</h2><div class="card">'+(Object.keys(best).length?Object.keys(best).sort().map(k=>'<div style="display:flex;justify-content:space-between;padding:4px 0"><span>'+esc(k)+'</span><b style="color:var(--pri)">'+fmt(best[k])+' kg</b></div>').join(''):'<span class="mu">Sem registros ainda.</span>')+'<h2>O que o aluno registrou</h2>'+histHTML(hist(u),{coach:1,cm:cms(u)});
+ }
  $('vt').innerHTML=h;
 }
+
+$('vt').addEventListener('change',e=>{
+ const t=e.target;
+ if(t.dataset.c==='chk'){
+  D.checks[t.dataset.id]=t.checked;
+  save();
+ }
+});
 
 $('vt').addEventListener('input',e=>{const t=e.target;if(!ed)return;if(t.dataset.ed)ed.n=t.value;else if(t.dataset.f){const x=ed.ex[t.dataset.i];x[t.dataset.f]=t.dataset.f==='k'?(parseInt(t.value)||1):t.value}});
 $('vt').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;const c=b.dataset.c,id=b.dataset.id,i=b.dataset.i,u=open;
  const saveR=r=>{D.rotinas[u]={rt:r};save()};
- if(c==='open'){open=id;ed=null}
+ if(c==='novoAluno'){
+  const nome = prompt('Digite o nome do novo aluno:');
+  if(nome && nome.trim()){
+   const slug = nome.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+   const novoId = 'aluno_' + slug;
+   D.perfis[novoId] = {n: nome.trim()};
+   save();
+   view();
+  }
+ }
+ else if(c==='copiarLink'){
+  const link = b.dataset.link;
+  navigator.clipboard.writeText(link).then(()=>alert('Link copiado para a área de transferência!'));
+ }
+ else if(c==='delAluno'){
+  if(confirm('Tem certeza que deseja excluir este aluno?')){
+   delete D.perfis[id];
+   delete D.treinos[id];
+   delete D.rotinas[id];
+   delete D.checks[id];
+   save();
+   open=null;
+   view();
+  }
+ }
+ else if(c==='open'){open=id;ed=null}
  else if(c==='back'){open=null;ed=null}
  else if(c==='newR')ed={rid:null,n:'',ex:[{e:'',k:3,v:''}]};
  else if(c==='editR'){const r=rts(u).find(x=>String(x.id)===id);ed={rid:r.id,n:r.n,ex:r.ex.map(x=>({...x}))}}
- else if(l=>c==='delR')saveR(rts(u).filter(x=>String(x.id)!==id));
+ else if(c==='delR')saveR(rts(u).filter(x=>String(x.id)!==id));
  else if(c==='addE')ed.ex.push({e:'',k:3,v:''});
  else if(c==='rmE')ed.ex.splice(i,1);
  else if(c==='cancelR')ed=null;
