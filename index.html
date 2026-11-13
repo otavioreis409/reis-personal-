@@ -730,6 +730,7 @@ const BANCO_EXER = [
 ];
 
 let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}, habitos:{}, cooper:{}, templates:{}, financeiro:{}};
+let isLoaded = false; // TRAVA DE SEGURANÇA 2: Impede salvamento antes da carga completa
 
 const urlParams = new URLSearchParams(window.location.search);
 let urlAluno = urlParams.get('aluno');
@@ -742,10 +743,40 @@ async function loadFromCloud(){
   try {
     const doc = await db.collection('app').doc('reis_db').get();
     if(doc.exists){
-      D = doc.data();
+      const cloudData = doc.data() || {};
+      // TRAVA DE SEGURANÇA 1: Mesclagem Inteligente (Merge) sem perder dados anteriores
+      D = {
+        perfis: { ...cloudData.perfis, ...(D.perfis || {}) },
+        treinos: { ...cloudData.treinos, ...(D.treinos || {}) },
+        rotinas: { ...cloudData.rotinas, ...(D.rotinas || {}) },
+        coment: { ...cloudData.coment, ...(D.coment || {}) },
+        checks: { ...cloudData.checks, ...(D.checks || {}) },
+        anamnese: { ...cloudData.anamnese, ...(D.anamnese || {}) },
+        corrida: { ...cloudData.corrida, ...(D.corrida || {}) },
+        habitos: { ...cloudData.habitos, ...(D.habitos || {}) },
+        cooper: { ...cloudData.cooper, ...(D.cooper || {}) },
+        templates: { ...cloudData.templates, ...(D.templates || {}) },
+        financeiro: { ...cloudData.financeiro, ...(D.financeiro || {}) }
+      };
+      
+      // Se houver dados na nuvem para perfis, atualiza o objeto principal com os dados consolidados
+      if(cloudData.perfis) {
+        Object.keys(cloudData.perfis).forEach(k => {
+          if(!D.perfis[k]) D.perfis[k] = cloudData.perfis[k];
+        });
+      }
+      if(cloudData.templates) {
+        Object.keys(cloudData.templates).forEach(k => {
+          if(!D.templates[k]) D.templates[k] = cloudData.templates[k];
+        });
+      }
     }
-  } catch(e){ console.error("Erro ao carregar nuvem", e); }
+  } catch(e){ 
+    console.error("Erro ao carregar nuvem", e); 
+  }
   
+  isLoaded = true; // Libera salvamentos seguros após leitura concluída
+
   if(urlAluno){
     let nomeFormatado = urlAluno.charAt(0).toUpperCase() + urlAluno.slice(1);
     if(!D.perfis) D.perfis = {};
@@ -771,9 +802,27 @@ async function loadFromCloud(){
 }
 
 async function save(){ 
+  if(!isLoaded) return; // TRAVA DE SEGURANÇA 2: Bloqueia salvamento se a leitura inicial falhou ou não terminou
   try {
     await db.collection('app').doc('reis_db').set(D);
   } catch(e){ console.error("Erro ao salvar nuvem", e); }
+}
+
+// TRAVA DE SEGURANÇA 3: Função dedicada para Atualização Parcial de chaves específicas na nuvem
+async function savePartial(key, subKey, data){
+  if(!isLoaded) return;
+  try {
+    if(subKey){
+      if(!D[key]) D[key] = {};
+      D[key][subKey] = data;
+      await db.collection('app').doc('reis_db').update({ [`${key}.${subKey}`]: data });
+    } else {
+      await db.collection('app').doc('reis_db').update({ [key]: D[key] });
+    }
+  } catch(e) {
+    // Fallback caso o documento ainda não exista no formato exato de sub-chave
+    await save();
+  }
 }
 
 function saveActiveWorkout(){
@@ -818,7 +867,7 @@ $('btnSalvarAnamnese').onclick = async () => {
 
   if(!D.anamnese) D.anamnese = {};
   D.anamnese[me] = { alt, peso, dor, dias, tempo, obj, data: Date.now() };
-  await save();
+  await savePartial('anamnese', me, D.anamnese[me]);
   view();
 };
 
@@ -893,6 +942,7 @@ function viewA(){
 
  renderZonasCooperAluno();
 
+ // VISUAL LIMPO DAS ROTINAS (Apenas nome e dia da semana)
  $('rt').innerHTML = (R.length?R.map(r=>{
    const isRun = r.tipo === 'corrida';
    const diaSemanaBadge = r.diaSemana ? `<span class="bd" style="background:var(--acc-t);color:var(--acc)">📅 ${esc(r.diaSemana)}</span>` : '';
@@ -904,7 +954,7 @@ function viewA(){
 
  document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const r=R.find(x=>x.id==b.dataset.r);start(r)});
  $('hs').innerHTML=histHTML(hist(me),{del:1,cm:cms(me)});
- document.querySelectorAll('[data-h]').forEach(b=>b.onclick=async()=>{const h=hist(me).filter(w=>w.id!=b.dataset.h);if(!D.treinos)D.treinos={};D.treinos[me]={h};await save();view()});
+ document.querySelectorAll('[data-h]').forEach(b=>b.onclick=async()=>{const h=hist(me).filter(w=>w.id!=b.dataset.h);if(!D.treinos)D.treinos={};D.treinos[me]={h};await savePartial('treinos', me, D.treinos[me]);view()});
  
  const cur=$('sel').value,L=[...new Set(hist(me).filter(h=>h.tipo!=='corrida').flatMap(h=>h.ex.map(x=>x.e)))].sort();
  $('sel').innerHTML=L.map(e=>'<option'+(e===cur?' selected':'')+'>'+esc(e)+'</option>').join('');
@@ -922,7 +972,7 @@ document.addEventListener('click', async e => {
     if(!D.habitos) D.habitos = {};
     if(!D.habitos[me]) D.habitos[me] = {};
     D.habitos[me][hojeIso] = { agua, sono };
-    await save();
+    await savePartial('habitos', me, D.habitos[me]);
     alert('Hábitos salvos com sucesso!');
   }
 
@@ -943,7 +993,7 @@ document.addEventListener('click', async e => {
     if(!D.cooper) D.cooper = {};
     if(!D.cooper[me]) D.cooper[me] = [];
     D.cooper[me].unshift(novoTeste);
-    await save();
+    await savePartial('cooper', me, D.cooper[me]);
     $('cooperDist').value = '';
     alert('Teste de Cooper registrado e zonas calculadas com sucesso!');
     view();
@@ -963,7 +1013,7 @@ function renderZonasCooperAluno(){
   }
 
   const ultimo = list[0];
-  const vMps = ultimo.dist / 720; // metros por segundo
+  const vMps = ultimo.dist / 720; 
   const paceSecKm = vMps > 0 ? 1000 / vMps : 0;
   const paceMin = Math.floor(paceSecKm / 60);
   const paceSec = Math.round(paceSecKm % 60);
@@ -1246,7 +1296,10 @@ async function finalizarTreino(){
   if(!D.treinos) D.treinos = {};
   if(!D.treinos[me]) D.treinos[me]  = {h: []};
   D.treinos[me].h.unshift(W);
-  await save();
+  
+  // ATUALIZAÇÃO PARCIAL: Salva apenas os treinos do aluno sem mexer em perfis ou templates globais
+  await savePartial('treinos', me, D.treinos[me]);
+  
   localStorage.removeItem('reis_treino_ativo_' + me);
   W = null;
   $('w').hidden = true;
@@ -1656,7 +1709,7 @@ function viewC(){
 async function toggleCheck(u, status){
  if(!D.checks) D.checks = {};
  D.checks[u] = status;
- await save();
+ await savePartial('checks', u, status);
 }
 
 async function togglePagamentoPin(u, status){
@@ -1664,7 +1717,7 @@ async function togglePagamentoPin(u, status){
   const mesAtual = new Date().toISOString().slice(0,7);
   if(!D.financeiro[u]) D.financeiro[u] = {};
   D.financeiro[u][mesAtual] = status;
-  await save();
+  await savePartial('financeiro', u, D.financeiro[u]);
   view();
 }
 
@@ -1673,7 +1726,7 @@ async function atualizarValorAluno(u, novoValor){
   if(isNaN(val)) return;
   if(!D.perfis[u]) D.perfis[u] = {};
   D.perfis[u].valor = val;
-  await save();
+  await savePartial('perfis', u, D.perfis[u]);
 }
 
 async function salvarTemplateEditado(){
@@ -1682,7 +1735,7 @@ async function salvarTemplateEditado(){
   edTpl.n = nomeInput;
   if(!D.templates) D.templates = {};
   D.templates[edTpl.id] = { n: edTpl.n, ex: edTpl.ex };
-  await save();
+  await savePartial('templates', edTpl.id, D.templates[edTpl.id]);
   edTpl = null;
   alert('Template atualizado com sucesso!');
   view();
@@ -1715,7 +1768,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
  const saveR = async r => {
   if(!D.rotinas) D.rotinas = {};
   D.rotinas[u] = {rt: r};
-  await save();
+  await savePartial('rotinas', u, D.rotinas[u]);
  };
 
  if(c==='gerarPDF'){
@@ -1781,7 +1834,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
     if(!D.rotinas) D.rotinas = {};
     if(!D.rotinas[alunoEscolhido]) D.rotinas[alunoEscolhido] = { rt: [] };
     D.rotinas[alunoEscolhido].rt.push(novaRotina);
-    await save();
+    await savePartial('rotinas', alunoEscolhido, D.rotinas[alunoEscolhido]);
     alert('Template aplicado com sucesso para ' + D.perfis[alunoEscolhido].n + '!');
     view();
   } else if(alunoEscolhido) {
@@ -1806,7 +1859,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
    const tid = Date.now();
    if(!D.templates) D.templates = {};
    D.templates[tid] = { n: nomeT.trim(), ex: JSON.parse(JSON.stringify(rotinasAluno[0].ex)) };
-   await save();
+   await savePartial('templates', tid, D.templates[tid]);
    alert('Template salvo com sucesso!');
    view();
   }
@@ -1822,7 +1875,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
        { e: "Supino Reto com Barra", v: "https://www.youtube.com/watch?v=rT7DgCr-3pg", grupo: "", descanso: 90, s: [{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''}] }
      ]
    };
-   await save();
+   await savePartial('templates', tid, D.templates[tid]);
    view();
   }
  }
@@ -1849,7 +1902,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
    const novoId = 'aluno_' + slug;
    if(!D.perfis) D.perfis = {};
    D.perfis[novoId] = {n: nome.trim(), valor: parseFloat(valorMensal) || 150};
-   await save();
+   await savePartial('perfis', novoId, D.perfis[novoId]);
    view();
   }
  }
@@ -1937,7 +1990,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   const m={...cms(u)};
   if(t) m[w]=t; else delete m[w];
   D.coment[u]={c:m}; 
-  await save();
+  await savePartial('coment', u, D.coment[u]);
   document.activeElement.blur();
  }
  view()});
