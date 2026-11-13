@@ -10,6 +10,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <!-- Biblioteca html2pdf para Gerar Relatório em PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<!-- Biblioteca canvas-confetti para Efeitos de PR -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <style>
 :root{
   --bg:#0D0D0F;
@@ -274,7 +276,6 @@ td input{
 td input:focus{border-color:var(--pri);background:var(--elev);outline:none}
 td input::placeholder{color:var(--mu2);font-weight:600}
 
-/* Estilo para campos bloqueados para o aluno (Reps e RPE prescritos) */
 td input.readonly-presc {
   background: var(--bg2);
   color: var(--mu);
@@ -415,6 +416,26 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
 .bd.ok{background:var(--ok-t);color:var(--ok);border-color:transparent}
 .bd.run{background:var(--acc-t);color:var(--acc);border-color:transparent}
 
+/* Banner PR */
+#prBanner {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  background: var(--pri);
+  color: var(--on-pri);
+  padding: 12px 24px;
+  border-radius: 99px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  box-shadow: 0 10px 30px rgba(255,208,0,0.4);
+  z-index: 999;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+#prBanner.show {
+  transform: translateX(-50%) translateY(0);
+}
+
 /* Modal de Busca de Exercícios por Grupo Muscular */
 #modalBuscaEx {
   position: fixed;
@@ -543,7 +564,7 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
 </style>
 </head>
 <body>
-<div id="prBanner" hidden>🎉 Novo Recorde Pessoal Batido!</div>
+<div id="prBanner">🎉 Novo Recorde Pessoal Batido!</div>
 <div class="top"><div class="r"><h1>Reis <span>Personal</span></h1><div class="seg" id="seg"><button data-m="0" id="btnAluno">Aluno</button><button data-m="1" id="btnCoach">Treinador</button></div></div><div id="who" class="mu"></div></div>
 <main id="app">
  <section id="vn" hidden>
@@ -1001,7 +1022,6 @@ function start(r){
     dur: 0,
     ex: JSON.parse(JSON.stringify(r.ex))
   };
-  // Inicializa campos feitos do aluno se não existirem
   W.ex.forEach(x=>{
     if(x.s){
       x.s.forEach(s=>{
@@ -1067,8 +1087,16 @@ function renderW(){
         <button class="btn g" style="margin-top:10px" onclick="if(confirm('Cancelar treino atual?')){clearInterval(tk);W=null;localStorage.removeItem('reis_treino_ativo_'+me);$('w').hidden=true;view()}">Cancelar Treino</button>
         </main>`;
 
-  $('w').innerHTML = h;
-  $('w').hidden = false;
+  // Evita re-renderizar todo o DOM caso o foco esteja em um input, impedindo que o teclado feche sozinho
+  const activeEl = document.activeElement;
+  const activeId = activeEl ? activeEl.id : null;
+  const activeName = activeEl ? activeEl.name : null;
+  const isInputFocused = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
+
+  if(!isInputFocused){
+    $('w').innerHTML = h;
+    $('w').hidden = false;
+  }
 }
 
 function toggleSérieTipo(xi, si){
@@ -1104,14 +1132,66 @@ async function finalizarTreino(){
       if(el) x.realizado = el.value.trim();
     });
   }
+
+  // Verifica se Bateu Recorde Pessoal (PR)
+  let isPR = false;
+  const historicoAntigo = hist(me);
+  W.ex.forEach(x => {
+    if(x.s && x.tipo !== 'A'){
+      x.s.forEach(s => {
+        const cargaAtual = s.kg || 0;
+        const repsAtual = parseFloat(s.rf || s.r || 0);
+        if(cargaAtual > 0 && repsAtual > 0){
+          const rmAtual = e1(cargaAtual, repsAtual);
+          // Procura maior 1RM anterior neste exercício
+          let maiorRmAntigo = 0;
+          historicoAntigo.forEach(treinoAnt => {
+            if(treinoAnt.ex){
+              treinoAnt.ex.forEach(exAnt => {
+                if(exAnt.e === x.e && exAnt.s){
+                  exAnt.s.forEach(sAnt => {
+                    const cAnt = sAnt.kg || 0;
+                    const rAnt = parseFloat(sAnt.rf || sAnt.r || 0);
+                    if(cAnt > 0 && rAnt > 0){
+                      const rmAnt = e1(cAnt, rAnt);
+                      if(rmAnt > maiorRmAntigo) maiorRmAntigo = rmAnt;
+                    }
+                  });
+                }
+              });
+            }
+          });
+          if(rmAtual > maiorRmAntigo && maiorRmAntigo > 0){
+            isPR = true;
+          }
+        }
+      });
+    }
+  });
+
   if(!D.treinos) D.treinos = {};
-  if(!D.treinos[me]) D.treinos[me] = {h: []};
+  if(!D.treinos[me]) D.treinos[me]  = {h: []};
   D.treinos[me].h.unshift(W);
   await save();
   localStorage.removeItem('reis_treino_ativo_' + me);
   W = null;
   $('w').hidden = true;
   view();
+
+  if(isPR){
+    const banner = $('prBanner');
+    if(banner){
+      banner.classList.add('show');
+      setTimeout(() => banner.classList.remove('show'), 4000);
+    }
+    if(typeof confetti === 'function'){
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.6 }
+      });
+    }
+  }
 }
 
 function abrirBuscaExercicios(exerIdx, isTemplate = false){
@@ -1710,7 +1790,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
  else if(c==='rmS') ed.ex[b.dataset.ex].s.splice(b.dataset.si, 1);
  else if(c==='addERun') ed.ex.push({e:'', dist:'', zona:'Z2'});
  else if(c==='rmE') ed.ex.splice(i,1);
- else if(c==='cancelR') ed=null;
+ else if(c==='cancelR') ed=label=null;
  else if(c==='saveR'){
   if(!ed.n.trim()) return;
   const dSemana = ed.diaSemana || 'Segunda-feira';
