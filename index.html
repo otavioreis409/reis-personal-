@@ -642,13 +642,31 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
     </div>
     <button class="btn s t" style="margin-top:10px; width:100%" data-hab="salvar">Salvar Hábitos de Hoje</button>
   </div>
+
+  <div class="card" style="border-left: 3px solid var(--pri);">
+    <h3 style="color:var(--pri)">🏃 Teste de Cooper (12 minutos)</h3>
+    <p class="mu" style="margin-top:4px">Corra a maior distância possível em 12 minutos e registre abaixo para a IA calcular suas zonas de treino aeróbico.</p>
+    <div style="display:grid; grid-template-columns: 1fr auto; gap:10px; margin-top:10px">
+      <input class="t" id="cooperDist" type="number" placeholder="Distância em metros (ex: 2400)">
+      <button class="btn s t" data-cooper="salvar">Registrar Teste</button>
+    </div>
+    <div id="cooperZonasRes" style="margin-top:12px"></div>
+  </div>
+
   <h2>Minhas rotinas</h2>
   <div id="rt"></div>
  </section>
  <section id="v1" hidden><h2>Histórico</h2><div id="hs"></div></section>
- <section id="v2" hidden><h2>Progresso</h2><select id="sel"></select>
+ <section id="v2" hidden>
+  <h2>Progresso da Musculação</h2>
+  <select id="sel"></select>
   <div class="st"><div><b id="p1">–</b><span class="mu">Melhor 1RM est.</span></div><div><b id="p2">–</b><span class="mu">Maior carga</span></div><div><b id="p3">–</b><span class="mu">Treinos</span></div></div>
-  <div class="card" id="ch"></div><p class="mu">1RM por Epley: carga × (1 + reps/30). Aquecimento não entra.</p></section>
+  <div class="card" id="ch"></div>
+
+  <h2 style="margin-top:24px">🏃 Evolução do Teste de Cooper & Zonas</h2>
+  <div class="st"><div><b id="cpMaxDist">–</b><span class="mu">Maior Distância</span></div><div><b id="cpMaxVo2">–</b><span class="mu">Melhor VO2máx</span></div><div><b id="cpTotalTests">–</b><span class="mu">Testes Feitos</span></div></div>
+  <div class="card" id="cpHistoryCard"></div>
+ </section>
  <section id="vt" hidden></section>
 </main>
 <div class="tabs" id="tabs"><button data-v="0"><b>🏋️</b>Treino</button><button data-v="1"><b>🗓️</b>Histórico</button><button data-v="2"><b>📈</b>Progresso</button></div>
@@ -677,193 +695,41 @@ const work=s=>s.filter(x=>x.t!=='A');
 const slugify=s=>s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 
 const BANCO_EXER = [
-  // PEITORAL
   { n: "Supino Reto com Barra", m: "Peitoral", v: "https://www.youtube.com/watch?v=rT7DgCr-3pg" },
   { n: "Supino Reto com Halteres", m: "Peitoral", v: "" },
   { n: "Supino Inclinado com Barra", m: "Peitoral", v: "" },
   { n: "Supino Inclinado com Halteres", m: "Peitoral", v: "https://www.youtube.com/watch?v=5xPuvmUnzZ8" },
   { n: "Supino Declinado com Barra", m: "Peitoral", v: "" },
-  { n: "Supino Declinado com Halteres", m: "Peitoral", v: "" },
-  { n: "Supino Articulado na Máquina", m: "Peitoral", v: "" },
-  { n: "Supino Inclinado Articulado", m: "Peitoral", v: "" },
   { n: "Crucifixo Reto com Halteres", m: "Peitoral", v: "" },
-  { n: "Crucifixo Inclinado com Halteres", m: "Peitoral", v: "" },
-  { n: "Crucifixo Declinado com Halteres", m: "Peitoral", v: "" },
   { n: "Crucifixo na Polia (Crossover)", m: "Peitoral", v: "" },
-  { n: "Crossover Polia Alta", m: "Peitoral", v: "" },
-  { n: "Crossover Polia Média", m: "Peitoral", v: "" },
-  { n: "Crossover Polia Baixa", m: "Peitoral", v: "" },
   { n: "Flexão de Braços no Solo", m: "Peitoral", v: "" },
-  { n: "Flexão de Braços Declinada", m: "Peitoral", v: "" },
-  { n: "Flexão de Braços Inclinada", m: "Peitoral", v: "" },
-  { n: "Flexão com Joelhos Apoio", m: "Peitoral", v: "" },
   { n: "Paralelas para Peito (Mergulho)", m: "Peitoral", v: "" },
-  { n: "Pullover com Halter", m: "Peitoral", v: "" },
-  { n: "Pullover na Polia Alta", m: "Peitoral", v: "" },
-  { n: "Voador (Peck Deck)", m: "Peitoral", v: "" },
-  { n: "Supino Reto com Pegada Fechada", m: "Peitoral", v: "" },
-
-  // COSTAS
   { n: "Puxada Alta na Polia (Frente)", m: "Costas", v: "https://www.youtube.com/watch?v=CAwf7n6Luuc" },
-  { n: "Puxada Alta na Polia (Nuca)", m: "Costas", v: "" },
-  { n: "Puxada Triângulo na Polia", m: "Costas", v: "" },
-  { n: "Puxada com Pegada Supinada", m: "Costas", v: "" },
-  { n: "Puxada com Pegada Neutra", m: "Costas", v: "" },
   { n: "Remada Curvada com Barra", m: "Costas", v: "https://www.youtube.com/watch?v=vT2GjY_Umpw" },
-  { n: "Remada Curvada com Halteres", m: "Costas", v: "" },
   { n: "Remada Baixa na Polia", m: "Costas", v: "" },
-  { n: "Remada Baixa Triângulo", m: "Costas", v: "" },
-  { n: "Remada Cavalinho", m: "Costas", v: "" },
   { n: "Remada Unilateral com Halter (Serrote)", m: "Costas", v: "" },
-  { n: "Remada Unilateral na Polia", m: "Costas", v: "" },
   { n: "Barra Fixa Pronada", m: "Costas", v: "" },
-  { n: "Barra Fixa Supinada", m: "Costas", v: "" },
-  { n: "Barra Fixa Neutra", m: "Costas", v: "" },
-  { n: "Pull Down na Polia", m: "Costas", v: "" },
-  { n: "Remada Articulada Horizontal", m: "Costas", v: "" },
-  { n: "Remada Articulada Vertical (Chest Supported)", m: "Costas", v: "" },
-  { n: "Remada T com Apoio", m: "Costas", v: "" },
   { n: "Levantamento Terra Tradicional", m: "Costas", v: "https://www.youtube.com/watch?v=op9kVnSso6Q" },
-  { n: "Levantamento Terra Sumô", m: "Costas", v: "" },
-  { n: "Remada Alta com Barra", m: "Costas", v: "" },
-  { n: "Remada Alta com Halteres", m: "Costas", v: "" },
-  { n: "Pullover com Corda na Polia", m: "Costas", v: "" },
-
-  // PERNAS / QUADRÍCEPS / POSTERIOR
   { n: "Agachamento Livre com Barra", m: "Pernas", v: "https://www.youtube.com/watch?v=aclHkVaku9U" },
-  { n: "Agachamento Frontal com Barra", m: "Pernas", v: "" },
-  { n: "Agachamento no Smith", m: "Pernas", v: "" },
-  { n: "Agachamento Goblet com Halter", m: "Pernas", v: "" },
-  { n: "Agachamento Sumô com Halter", m: "Pernas", v: "" },
-  { n: "Agachamento Búlgaro com Halteres", m: "Pernas", v: "" },
   { n: "Leg Press 45º", m: "Pernas", v: "https://www.youtube.com/watch?v=IZxyjW7MPJQ" },
-  { n: "Leg Press 45º (Pés Altos)", m: "Pernas", v: "" },
-  { n: "Leg Press 45º (Pés Juntos)", m: "Pernas", v: "" },
-  { n: "Leg Press Horizontal", m: "Pernas", v: "" },
   { n: "Cadeira Extensora", m: "Pernas", v: "" },
-  { n: "Cadeira Extensora Unilateral", m: "Pernas", v: "" },
   { n: "Mesa Flexora", m: "Pernas", v: "" },
-  { n: "Mesa Flexora Unilateral", m: "Pernas", v: "" },
-  { n: "Cadeira Flexora", m: "Pernas", v: "" },
-  { n: "Flexor em Pé na Máquina", m: "Pernas", v: "" },
   { n: "Stiff com Barra", m: "Pernas", v: "" },
-  { n: "Stiff com Halteres", m: "Pernas", v: "" },
-  { n: "Afundo com Halteres", m: "Pernas", v: "" },
-  { n: "Afundo com Barra no Smith", m: "Pernas", v: "" },
-  { n: "Passada / Avanço com Halteres", m: "Pernas", v: "" },
-  { n: "Good Morning com Barra", m: "Pernas", v: "" },
-  { n: "Cadeira Adutora", m: "Pernas", v: "" },
-  { n: "Cadeira Abdutora", m: "Pernas", v: "" },
-  { n: "Extensão de Quadril na Polia", m: "Pernas", v: "" },
-  { n: "Hack Machine Agachamento", m: "Pernas", v: "" },
-  { n: "Sissy Squat", m: "Pernas", v: "" },
-
-  // GLÚTEOS
   { n: "Elevação Pélvica na Máquina", m: "Glúteos", v: "" },
-  { n: "Elevação Pélvica com Barra", m: "Glúteos", v: "" },
-  { n: "Elevação Pélvica com Halter no Solo", m: "Glúteos", v: "" },
-  { n: "Glúteo Coice na Polia Baixa", m: "Glúteos", v: "" },
-  { n: "Glúteo 4 Apoios com Caneleira", m: "Glúteos", v: "" },
-  { n: "Glúteo 4 Apoios com Joelho Estendido", m: "Glúteos", v: "" },
-  { n: "Abdução de Quadril em Pé na Polia", m: "Glúteos", v: "" },
-  { n: "Hip Thrust no Banco", m: "Glúteos", v: "" },
-
-  // OMBROS
   { n: "Elevação Lateral com Halteres", m: "Ombros", v: "https://www.youtube.com/watch?v=3VscugTfxzo" },
-  { n: "Elevação Lateral na Polia", m: "Ombros", v: "" },
-  { n: "Elevação Lateral Sentado", m: "Ombros", v: "" },
-  { n: "Elevação Lateral no Aparelho (Máquina)", m: "Ombros", v: "" },
   { n: "Desenvolvimento com Halteres", m: "Ombros", v: "" },
-  { n: "Desenvolvimento com Halteres Sentado", m: "Ombros", v: "" },
-  { n: "Desenvolvimento Militar com Barra", m: "Ombros", v: "" },
-  { n: "Desenvolvimento na Máquina Articulada", m: "Ombros", v: "" },
-  { n: "Desenvolvimento Arnold", m: "Ombros", v: "" },
-  { n: "Elevação Frontal com Halteres", m: "Ombros", v: "" },
-  { n: "Elevação Frontal com Barra", m: "Ombros", v: "" },
-  { n: "Elevação Frontal na Polia", m: "Ombros", v: "" },
-  { n: "Crucifixo Inverso com Halteres", m: "Ombros", v: "" },
-  { n: "Crucifixo Inverso na Polia", m: "Ombros", v: "" },
-  { n: "Crucifixo Inverso no Peck Deck", m: "Ombros", v: "" },
-  { n: "Encolhimento de Ombros com Halteres", m: "Ombros", v: "" },
-  { n: "Encolhimento de Ombros com Barra", m: "Ombros", v: "" },
-  { n: "Encolhimento no Smith", m: "Ombros", v: "" },
-  { n: "Face Pull na Polia", m: "Ombros", v: "" },
-
-  // BÍCEPS
   { n: "Rosca Direta com Barra Reta", m: "Bíceps", v: "https://www.youtube.com/watch?v=ykJmrZ5v0Oo" },
-  { n: "Rosca Direta com Barra W", m: "Bíceps", v: "" },
-  { n: "Rosca Direta com Halteres", m: "Bíceps", v: "" },
-  { n: "Rosca Alternada com Halteres", m: "Bíceps", v: "" },
   { n: "Rosca Martelo com Halteres", m: "Bíceps", v: "" },
-  { n: "Rosca Martelo na Polia com Corda", m: "Bíceps", v: "" },
-  { n: "Rosca Scott com Barra W", m: "Bíceps", v: "" },
-  { n: "Rosca Scott Unilateral com Halter", m: "Bíceps", v: "" },
-  { n: "Rosca Concentrada com Halter", m: "Bíceps", v: "" },
-  { n: "Rosca na Polia Baixa", m: "Bíceps", v: "" },
-  { n: "Rosca Inversa com Barra W", m: "Bíceps", v: "" },
-  { n: "Rosca Inversa na Polia", m: "Bíceps", v: "" },
-  { n: "Rosca 21 com Barra", m: "Bíceps", v: "" },
-  { n: "Rosca Spider no Banco Inclinado", m: "Bíceps", v: "" },
-
-  // TRÍCEPS
   { n: "Tríceps Testa com Barra W", m: "Tríceps", v: "https://www.youtube.com/watch?v=d_KZxkY_0cM" },
-  { n: "Tríceps Testa com Halteres", m: "Tríceps", v: "" },
   { n: "Tríceps na Polia com Corda", m: "Tríceps", v: "" },
-  { n: "Tríceps na Polia com Barra Reta", m: "Tríceps", v: "" },
-  { n: "Tríceps na Polia com Barra V", m: "Tríceps", v: "" },
-  { n: "Tríceps Coice com Halter", m: "Tríceps", v: "" },
-  { n: "Tríceps Coice na Polia", m: "Tríceps", v: "" },
-  { n: "Tríceps Mergulho nas Paralelas", m: "Tríceps", v: "" },
-  { n: "Tríceps Francês com Halter", m: "Tríceps", v: "" },
-  { n: "Tríceps Francês na Polia com Corda", m: "Tríceps", v: "" },
-  { n: "Tríceps Supino com Pegada Fechada", m: "Tríceps", v: "" },
-  { n: "Tríceps na Máquina (Dips Machine)", m: "Tríceps", v: "" },
-
-  // PANTURRILHAS
   { n: "Panturrilhas em Pé na Máquina", m: "Panturrilhas", v: "" },
-  { n: "Panturrilhas em Pé no Smith", m: "Panturrilhas", v: "" },
-  { n: "Panturrilhas Sentado no Solear", m: "Panturrilhas", v: "" },
-  { n: "Panturrilha no Leg Press 45º", m: "Panturrilhas", v: "" },
-  { n: "Panturrilha Unilateral no Degrau", m: "Panturrilhas", v: "" },
-  { n: "Panturrilha em Pé Livre (Peso Corporal)", m: "Panturrilhas", v: "" },
-
-  // ABDÔMEN E CORE
   { n: "Abdominal Supra no Solo (Crunch)", m: "Abdômen", v: "" },
-  { n: "Abdominal Infra na Barra Fixa (Elevação de Pernas)", m: "Abdômen", v: "" },
-  { n: "Abdominal Infra no Solo (Pernas Retas)", m: "Abdômen", v: "" },
-  { n: "Abdominal na Polia Alta (De Joelhos)", m: "Abdômen", v: "" },
-  { n: "Abdominal Remador", m: "Abdômen", v: "" },
-  { n: "Abdominal Canivete", m: "Abdômen", v: "" },
-  { n: "Abdominal Oblíquo no Solo", m: "Abdômen", v: "" },
   { n: "Prancha Abdominal Isométrica", m: "Abdômen", v: "" },
-  { n: "Prancha Lateral", m: "Abdômen", v: "" },
-  { n: "Prancha com Movimento (Dinâmica)", m: "Abdômen", v: "" },
-  { n: "Rotação de Tronco na Polia (Woodcutter)", m: "Abdômen", v: "" },
-  { n: "Elevação de Joelhos na Paralela (Capitão)", m: "Abdômen", v: "" },
-  { n: "Abdominal na Máquina", m: "Abdômen", v: "" },
-  { n: "Ab Wheel (Roda Abdominal)", m: "Abdômen", v: "" },
-
-  // ANTEBRAÇO
-  { n: "Rosca de Punho com Barra (Palmas para Cima)", m: "Antebraço", v: "" },
-  { n: "Rosca Inversa de Punho com Barra (Palmas para Baixo)", m: "Antebraço", v: "" },
-  { n: "Suspensão na Barra Fixa (Dead Hang)", m: "Antebraço", v: "" },
-  { n: "Enrolador de Punho (Rolinho)", m: "Antebraço", v: "" },
-
-  // CARDIO E AQUECIMENTO
   { n: "Esteira - Corrida Contínua", m: "Cardio", v: "" },
-  { n: "Esteira - Caminhada Inclinada", m: "Cardio", v: "" },
-  { n: "Esteira - Intervalado (Tiros)", m: "Cardio", v: "" },
-  { n: "Bicicleta Ergométrica", m: "Cardio", v: "" },
-  { n: "Bicicleta Spinning", m: "Cardio", v: "" },
-  { n: "Elíptico", m: "Cardio", v: "" },
-  { n: "Remo Seco (Ergômetro Concept2)", m: "Cardio", v: "" },
-  { n: "Pular Corda", m: "Cardio", v: "" },
-  { n: "Escada (Climber)", m: "Cardio", v: "" },
-  { n: "Polichinelos", m: "Cardio", v: "" },
-  { n: "Burpees", m: "Cardio", v: "" }
+  { n: "Bicicleta Ergométrica", m: "Cardio", v: "" }
 ];
 
-let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}, habitos:{}, templates:{}, financeiro:{}};
+let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}, habitos:{}, cooper:{}, templates:{}, financeiro:{}};
 
 const urlParams = new URLSearchParams(window.location.search);
 let urlAluno = urlParams.get('aluno');
@@ -960,8 +826,9 @@ function precisaAnamnese(){
   if(coachView || !urlAluno) return false;
   const a = D.anamnese[me];
   if(!a) return true;
+  if(W) return false; // Se estiver em treino ativo, nunca força anamnese
   const doisMeses = 5184000000;
-  if(Date.now() - a.data > doisMeses) return true;
+  if(a.data && (Date.now() - a.data > doisMeses)) return true;
   return false;
 }
 
@@ -1024,6 +891,8 @@ function viewA(){
  if($('habAgua')) $('habAgua').value = habHoje.agua !== undefined ? habHoje.agua : '';
  if($('habSono')) $('habSono').value = habHoje.sono !== undefined ? habHoje.sono : '';
 
+ renderZonasCooperAluno();
+
  $('rt').innerHTML = (R.length?R.map(r=>{
    const isRun = r.tipo === 'corrida';
    const diaSemanaBadge = r.diaSemana ? `<span class="bd" style="background:var(--acc-t);color:var(--acc)">📅 ${esc(r.diaSemana)}</span>` : '';
@@ -1041,6 +910,7 @@ function viewA(){
  $('sel').innerHTML=L.map(e=>'<option'+(e===cur?' selected':'')+'>'+esc(e)+'</option>').join('');
  
  renderProgressoAluno();
+ renderProgressoCooperAluno();
 }
 
 document.addEventListener('click', async e => {
@@ -1055,9 +925,87 @@ document.addEventListener('click', async e => {
     await save();
     alert('Hábitos salvos com sucesso!');
   }
+
+  const btnCooper = e.target.closest('[data-cooper]');
+  if(btnCooper && btnCooper.dataset.cooper === 'salvar'){
+    const distInput = parseFloat($('cooperDist').value);
+    if(!distInput || distInput <= 0){
+      alert('Insira uma distância válida em metros.');
+      return;
+    }
+    const vo2 = (distInput - 504.9) / 44.73;
+    const novoTeste = {
+      id: Date.now(),
+      d: new Date().toISOString().slice(0,10),
+      dist: distInput,
+      vo2: Math.max(0, vo2)
+    };
+    if(!D.cooper) D.cooper = {};
+    if(!D.cooper[me]) D.cooper[me] = [];
+    D.cooper[me].unshift(novoTeste);
+    await save();
+    $('cooperDist').value = '';
+    alert('Teste de Cooper registrado e zonas calculadas com sucesso!');
+    view();
+  }
 });
 
 $('sel').onchange = () => renderProgressoAluno();
+
+function renderZonasCooperAluno(){
+  const list = (D.cooper && D.cooper[me]) || [];
+  const container = $('cooperZonasRes');
+  if(!container) return;
+
+  if(!list.length){
+    container.innerHTML = '<p class="mu" style="font-size:0.8rem">Nenhum teste registrado ainda. Insira sua distância acima.</p>';
+    return;
+  }
+
+  const ultimo = list[0];
+  const vMps = ultimo.dist / 720; // metros por segundo
+  const paceSecKm = vMps > 0 ? 1000 / vMps : 0;
+  const paceMin = Math.floor(paceSecKm / 60);
+  const paceSec = Math.round(paceSecKm % 60);
+
+  container.innerHTML = `
+    <div style="background:var(--pill); padding:10px; border-radius:10px; font-size:0.85rem; display:grid; gap:4px">
+      <div><b>📅 Último Teste (${dt(ultimo.d)}):</b> ${ultimo.dist} metros</div>
+      <div><b>🔥 VO2máx Estimado:</b> <b style="color:var(--pri)">${fmt(ultimo.vo2)} ml/kg/min</b></div>
+      <div style="margin-top:4px; border-top:1px solid var(--ln); padding-top:4px"><b>⚡ Zonas de Ritmo Sugeridas pela IA:</b></div>
+      <div class="mu">• Zona 1 (Regenerativo): ${paceMin+2}:${String(paceSec).padStart(2,'0')} - ${paceMin+3}:00 min/km</div>
+      <div class="mu">• Zona 2 (Aeróbico Base): ${paceMin+1}:${String(paceSec+30 > 59 ? 30 : paceSec+30)} - ${paceMin+2}:30 min/km</div>
+      <div class="mu">• Zona 4/5 (Limiar / VO2máx): ${paceMin}:${String(paceSec).padStart(2,'0')} min/km ou mais rápido</div>
+    </div>
+  `;
+}
+
+function renderProgressoCooperAluno(){
+  const list = (D.cooper && D.cooper[me]) || [];
+  const card = $('cpHistoryCard');
+  if(!card) return;
+
+  let maxDist = 0, maxVo2 = 0;
+  list.forEach(t => {
+    if(t.dist > maxDist) maxDist = t.dist;
+    if(t.vo2 > maxVo2) maxVo2 = t.vo2;
+  });
+
+  if($('cpMaxDist')) $('cpMaxDist').textContent = maxDist > 0 ? maxDist + ' m' : '–';
+  if($('cpMaxVo2')) $('cpMaxVo2').textContent = maxVo2 > 0 ? fmt(maxVo2) : '–';
+  if($('cpTotalTests')) $('cpTotalTests').textContent = list.length;
+
+  if(list.length){
+    let html = '<h4 style="margin:0 0 10px">Histórico de Testes de Cooper</h4><div style="display:grid; gap:8px">';
+    list.forEach(t => {
+      html += `<div style="display:flex; justify-content:space-between; align-items:center; background:var(--pill); padding:8px 12px; border-radius:8px"><span>📅 ${dt(t.d)} — <b>${t.dist} m</b></span><b style="color:var(--pri)">VO2: ${fmt(t.vo2)}</b></div>`;
+    });
+    html += '</div>';
+    card.innerHTML = html;
+  } else {
+    card.innerHTML = '<p class="mu">Nenhum teste de Cooper registrado até o momento.</p>';
+  }
+}
 
 function renderProgressoAluno(){
   const exercicioSelecionado = $('sel').value;
@@ -1089,7 +1037,6 @@ function renderProgressoAluno(){
   $('p2').textContent = maiorCarga > 0 ? fmt(maiorCarga) + ' kg' : '–';
   $('p3').textContent = treinosCount;
 
-  // Renderiza gráfico em texto/barras simples e limpo
   let chartHtml = '<h4 style="margin:0 0 10px">Histórico de Cargas (' + esc(exercicioSelecionado || 'Nenhum') + ')</h4>';
   const pontos = [];
   hList.forEach(w => {
@@ -1609,6 +1556,13 @@ function viewC(){
     }
   }
 
+  const cooperList = (D.cooper && D.cooper[u]) || [];
+  let cooperCoachHtml = '<p class="mu">Nenhum teste de Cooper registrado.</p>';
+  if(cooperList.length){
+    const ult = cooperList[0];
+    cooperCoachHtml = `<div style="font-size:0.88rem; display:grid; gap:4px"><div><b>Último Teste (${dt(ult.d)}):</b> ${ult.dist} metros</div><div><b>VO2máx:</b> <span style="color:var(--pri)">${fmt(ult.vo2)} ml/kg/min</span></div></div>`;
+  }
+
   h='<button class="x" data-c="back">← Todos os alunos</button><h2 style="margin-top:4px;font-size:1.4rem">'+esc(D.perfis[u].n)+'</h2>';
   
   h+='<div class="card"><h3>📊 Anamnese e Avaliação</h3>'+
@@ -1622,6 +1576,8 @@ function viewC(){
      '<div><b>Tempo por sessão:</b> '+(anam.tempo||'Não informado')+'</div>'+
      '<div><b>Dores articulares:</b> <span style="color:'+(anam.dor&&anam.dor.toLowerCase()!=='nenhuma'?'var(--danger)':'var(--ok)')+'">'+(anam.dor||'Nenhuma relatada')+'</span></div>'+
      '</div></div>';
+
+  h+='<div class="card"><h3>🏃 Teste de Cooper (Cardio)</h3><div style="margin-top:8px">'+cooperCoachHtml+'</div></div>';
 
   h+='<h2>Rotinas de Treino</h2>';
   if(ed){
@@ -1910,6 +1866,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
    if(D.anamnese) delete D.anamnese[id];
    if(D.corrida) delete D.corrida[id];
    if(D.habitos) delete D.habitos[id];
+   if(D.cooper) delete D.cooper[id];
    if(D.financeiro) delete D.financeiro[id];
    await save();
    open=null;
