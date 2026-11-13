@@ -378,15 +378,7 @@ input.t:focus,select:focus,textarea.t:focus{border-color:var(--pri);outline:none
   margin-bottom:2px;
 }
 svg{width:100%;height:auto}[hidden]{display:none!important}
-#msg{
-  margin:20px 16px;
-  padding:14px 16px;
-  border-radius:16px;
-  background:var(--card);
-  border:1px solid var(--ln);
-  border-left:4px solid var(--pri);
-  box-shadow:var(--sh);
-}
+#msg{display:none}
 
 .q{margin-bottom:20px}.q h4{margin:0 0 10px;font-size:.92rem;font-weight:700}
 .opts{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
@@ -447,9 +439,8 @@ input[type=range]{width:100%;accent-color:var(--pri)}
 </style>
 </head>
 <body>
-<div class="top"><div class="r"><h1>Reis <span>Personal</span></h1><div class="seg" id="seg" hidden><button data-m="0">Aluno</button><button data-m="1">Treinador</button></div></div><div id="who" class="mu"></div></div>
-<div id="msg">Carregando…</div>
-<main id="app" hidden>
+<div class="top"><div class="r"><h1>Reis <span>Personal</span></h1><div class="seg" id="seg"><button data-m="0">Aluno</button><button data-m="1" id="btnCoach">Treinador</button></div></div><div id="who" class="mu"></div></div>
+<main id="app">
  <section id="vn" hidden><div class="card"><h3>Bem-vindo(a)!</h3><p class="mu">Como você quer aparecer para o seu treinador?</p><input class="t" id="nm" placeholder="Seu nome"><button class="btn" style="margin-top:12px" id="nmb">Continuar</button></div></section>
  <section id="v0" hidden><button class="btn" id="empty">+ Iniciar treino vazio</button><h2>Minhas rotinas</h2><div id="rt"></div></section>
  <section id="v1" hidden><h2>Histórico</h2><div id="hs"></div></section>
@@ -458,7 +449,7 @@ input[type=range]{width:100%;accent-color:var(--pri)}
   <div class="card" id="ch"></div><p class="mu">1RM por Epley: carga × (1 + reps/30). Aquecimento não entra.</p></section>
  <section id="vt" hidden></section>
 </main>
-<div class="tabs" id="tabs" hidden><button data-v="0"><b>🏋️</b>Treino</button><button data-v="1"><b>🗓️</b>Histórico</button><button data-v="2"><b>📈</b>Progresso</button></div>
+<div class="tabs" id="tabs"><button data-v="0"><b>🏋️</b>Treino</button><button data-v="1"><b>🗓️</b>Histórico</button><button data-v="2"><b>📈</b>Progresso</button></div>
 <div id="w" hidden></div><datalist id="exl"></datalist>
 <script>
 const $=id=>document.getElementById(id);
@@ -466,42 +457,36 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const fmt=n=>(Math.round(n*10)/10).toString().replace('.',','),e1=(l,r)=>r<=1?l:l*(1+r/30);
 const mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0'),dt=d=>d.split('-').reverse().slice(0,2).join('/');
 const work=s=>s.filter(x=>x.t!=='A');
-const D={perfis:{},treinos:{},rotinas:{},coment:{}},COLS=['perfis','treinos','rotinas','coment'];
-let db=null,me=null,isCoach=false,coachView=false,tab=0,W=null,tk=null,rest=0,ed=null,open=null,ready=0;
-const hist=u=>(D.treinos[u]&&D.treinos[u].h)||[],rts=u=>(D.rotinas[u]&&D.rotinas[u].rt)||[],cms=u=>(D.coment[u]&&D.coment[u].c)||{};
-const msg=t=>{$('msg').hidden=!t;$('msg').textContent=t||''};
-const fail=e=>msg('Não foi possível salvar/ler os dados: '+((e&&e.message)||e));
-const put=async(p,d)=>{try{await db.doc(p).set(d)}catch(e){fail(e)}};
 
-async function init(){
- try{const user=await claude.use('user');db=await claude.use('db');
-  if(!db||!user)throw 0;me=await user.id();isCoach=await user.canEdit();if(!me)throw 0;coachView=isCoach}
- catch(e){msg('Para usar o Reis Personal, entre na sua conta do Claude e peça ao seu treinador para compartilhar o link com você.');return}
- setTimeout(()=>{if(ready<4)msg('Está demorando para carregar. Verifique sua conexão e se o treinador liberou seu acesso.')},10000);
- COLS.forEach(c=>{
-  const onE=e=>fail(e);
-  if(isCoach)db.collection(c).onSnapshot(s=>{D[c]={};s.docs.forEach(d=>D[c][d.id]=d.data());got(c)},onE);
-  else db.doc(c+'/'+me).onSnapshot(s=>{D[c]={};if(s.exists)D[c][me]=s.data();got(c)},onE)});
-}
-const seen=new Set();
-function got(c){if(c)seen.add(c);ready=seen.size;if(ready<4)return;msg('');
- const a=document.activeElement;if(a&&a.closest&&a.closest('#vt')&&/TEXTAREA|INPUT/.test(a.tagName))return;view()}
+let D = JSON.parse(localStorage.getItem('reis_db') || '{"perfis":{},"treinos":{},"rotinas":{},"coment":{}}');
+let me = localStorage.getItem('reis_me') || 'aluno_' + Math.random().toString(36).substring(2, 9);
+localStorage.setItem('reis_me', me);
+
+let isCoach = true, coachView = false, tab = 0, W = null, tk = null, rest = 0, ed = null, open = null;
+
+function save(){ localStorage.setItem('reis_db', JSON.stringify(D)); }
+const hist=u=>(D.treinos[u]&&D.treinos[u].h)||[],rts=u=>(D.rotinas[u]&&D.rotinas[u].rt)||[],cms=u=>(D.coment[u]&&D.coment[u].c)||{};
 
 $('seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{coachView=b.dataset.m==='1';open=null;ed=null;view()});
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{tab=+b.dataset.v;view()});
-$('nmb').onclick=()=>{const n=$('nm').value.trim();if(!n)return;D.perfis[me]={n};put('perfis/'+me,{n});view()};
+$('nmb').onclick=()=>{const n=$('nm').value.trim();if(!n)return;D.perfis[me]={n};save();view()};
+
 function view(){
- $('app').hidden=false;$('seg').hidden=!isCoach;
- $('seg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',(b.dataset.m==='1')===coachView));
- const needName=!coachView&&!D.perfis[me];
- $('vn').hidden=!needName;$('vt').hidden=!coachView;$('tabs').hidden=coachView||needName;
- [0,1,2].forEach(i=>$('v'+i).hidden=coachView||needName||i!==tab);
- document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',+x.dataset.v===tab));
- $('who').textContent=coachView?'Modo treinador: você vê todos os alunos que abriram o link.':(D.perfis[me]?'Olá, '+D.perfis[me].n+'!':'');
- const s=new Set(['Agachamento','Supino reto','Levantamento terra','Desenvolvimento','Remada curvada','Barra fixa']);
- Object.values(D.treinos).forEach(t=>(t.h||[]).forEach(h=>h.ex.forEach(x=>s.add(x.e))));$('exl').innerHTML=[...s].sort().map(e=>'<option value="'+esc(e)+'">').join('');
- if(needName)return;coachView?viewC():viewA();
+ coachView ? $('btnCoach').classList.add('on') : $('btnCoach').classList.remove('on');
+ const needName = !coachView && (!D.perfis[me] || !D.perfis[me].n);
+ $('vn').hidden = !needName; $('vt').hidden = !coachView; $('tabs').hidden = coachView || needName;
+ [0,1,2].forEach(i=>$('v'+i).hidden = coachView || needName || i!==tab);
+ document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on', +x.dataset.v===tab));
+ $('who').textContent = coachView ? 'Modo Treinador (Gerenciamento de Alunos)' : (D.perfis[me] ? 'Olá, '+D.perfis[me].n+'!' : '');
+ 
+ const s=new Set();
+ Object.values(D.treinos).forEach(t=>(t.h||[]).forEach(h=>h.ex.forEach(x=>s.add(x.e))));
+ $('exl').innerHTML=[...s].sort().map(e=>'<option value="'+esc(e)+'">').join('');
+
+ if(needName) return;
+ coachView ? viewC() : viewA();
 }
+
 function histHTML(h,o){return h.length?h.map(w=>{const vol=w.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*s.r,0),0),cm=(o.cm||{})[w.id];
  return '<div class="card"><h3>'+esc(w.n)+'</h3><div class="mu">'+dt(w.d)+' · '+mmss(w.dur)+' · volume '+fmt(vol)+' kg</div>'+ckHTML(w)+'<div style="margin-top:10px;font-size:.88rem;display:grid;gap:4px">'+w.ex.map(x=>'<div><b>'+esc(x.e)+'</b> <span class="mu">'+x.s.map(s=>(s.t&&s.t!=='N'?'<b style="color:var(--pri)">'+s.t+'</b> ':'')+fmt(s.kg)+'×'+s.r).join(' · ')+'</span></div>').join('')+'</div>'+
  (o.coach?'<textarea class="t" id="c'+w.id+'" rows="2" style="margin-top:10px" placeholder="Comentário para o aluno…">'+esc(cm||'')+'</textarea><button class="btn s g" style="margin-top:8px" data-c="cm" data-w="'+w.id+'">Salvar comentário</button>':(cm?'<div class="cm">💬 Treinador: '+esc(cm)+'</div>':''))+
@@ -512,6 +497,7 @@ function ckHTML(w){if(!w.ck&&w.pse==null)return '';const c=w.ck,o=[];
   o.push(c.dor?'<span class="bd warn">⚠ Dor: '+esc((c.locs||[]).join(', ')||'local não informado')+' ('+c.int+'/10)'+(c.obs?' · '+esc(c.obs):'')+'</span>':'<span class="bd ok">Sem dor</span>')}
  if(w.pse!=null)o.push('<span class="bd">🔥 PSE '+w.pse+'/10</span>','<span class="bd">Carga da sessão '+Math.round(w.pse*w.dur/60)+' u.a.</span>');
  return '<div>'+o.join('')+'</div>'}
+
 function drawCk(){const c=W.ck,R=['😫|Péssima','😕|Ruim','😐|Ok','🙂|Boa','💪|Ótima'],Z=['🥱|Péssimo','😴|Ruim','😐|Ok','🙂|Bom','😎|Ótimo'];
  const op=(k,A)=>'<div class="opts">'+A.map((t,i)=>{const p=t.split('|');return '<button class="opt'+(c[k]===i+1?' on':'')+'" data-a="q" data-q="'+k+'" data-v="'+(i+1)+'"><b>'+p[0]+'</b>'+p[1]+'</button>'}).join('')+'</div>';
  const LOC=['Ombro','Cotovelo','Punho','Lombar','Cervical','Quadril','Joelho','Tornozelo','Outro'];
@@ -521,18 +507,21 @@ function drawCk(){const c=W.ck,R=['😫|Péssima','😕|Ruim','😐|Ok','🙂|Bo
   '<div class="q" style="margin-bottom:0"><h4>Sente alguma dor?</h4><div class="chips"><button class="chip'+(c.dor?'':' on')+'" data-a="dor" data-v="0">Não</button><button class="chip'+(c.dor?' on':'')+'" data-a="dor" data-v="1">Sim</button></div>'+
   (c.dor?'<p class="mu" style="margin:12px 0 6px">Onde?</p><div class="chips">'+LOC.map(l=>'<button class="chip'+(c.locs.includes(l)?' on':'')+'" data-a="loc" data-l="'+l+'">'+l+'</button>').join('')+'</div><p class="mu" style="margin:12px 0 4px">Intensidade: <b id="iv" style="color:var(--pri)">'+c.int+'</b>/10</p><input type="range" min="1" max="10" value="'+c.int+'" data-q="int"><input class="t" style="margin-top:8px" data-q="obs" value="'+esc(c.obs)+'" placeholder="Observação (opcional)">':'')+'</div></div>'+
   '<p id="qe" hidden style="color:var(--danger);font-weight:700">Responda recuperação e descanso para continuar.</p><button class="btn" data-a="go">Começar treino</button></div>'}
+
 function drawPse(){const L=['Repouso','Muito fácil','Fácil','Moderado','Um pouco difícil','Difícil','Difícil','Muito difícil','Muito difícil','Muito difícil','Máximo'];
  $('w').innerHTML='<div class="wt"><button class="x" data-a="back">← Voltar</button><b style="letter-spacing:.08em;font-size:.82rem;color:var(--pri)">FINAL</b><span></span></div><div style="padding:8px 16px;max-width:640px;margin:0 auto"><h2 class="wt-title" style="margin-bottom:14px">Como foi o treino?</h2><div class="card"><h4 style="margin:0 0 4px;font-size:1rem">Percepção de esforço da sessão</h4><p class="mu" style="margin-bottom:14px">Pense no treino inteiro: de 0 (repouso) a 10 (esforço máximo).</p><div class="pse">'+Array.from({length:11},(_,v)=>'<button class="opt'+(W.pse===v?' on':'')+'" data-a="pse" data-v="'+v+'" style="border-bottom:4px solid hsl('+(120-12*v)+',75%,48%)"><b>'+v+'</b></button>').join('')+'</div><p style="margin:14px 0 0;font-weight:700;color:var(--pri)">'+(W.pse===null?'Escolha um número':W.pse+' · '+L[W.pse])+'</p></div><button class="btn" data-a="save">Salvar treino</button></div>'}
+
 function viewA(){
  const R=rts(me);
  $('rt').innerHTML=R.length?R.map(r=>'<div class="card"><h3>'+esc(r.n)+'</h3><div class="mu" style="margin-top:2px">'+r.ex.map(x=>esc(x.e)+' ('+x.k+'×)').join(' · ')+'</div><button class="btn s t" style="margin-top:12px" data-r="'+r.id+'">Iniciar rotina</button></div>').join(''):'<p class="mu">Seu treinador ainda não montou rotinas para você. Você já pode registrar um treino vazio.</p>';
  document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const r=R.find(x=>x.id==b.dataset.r);start(r.n,r.ex)});
  $('hs').innerHTML=histHTML(hist(me),{del:1,cm:cms(me)});
- document.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{const h=hist(me).filter(w=>w.id!=b.dataset.h);D.treinos[me]={h};put('treinos/'+me,{h});view()});
+ document.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{const h=hist(me).filter(w=>w.id!=b.dataset.h);D.treinos[me]={h};save();view()});
  const cur=$('sel').value,L=[...new Set(hist(me).flatMap(h=>h.ex.map(x=>x.e)))].sort();
  $('sel').innerHTML=L.map(e=>'<option'+(e===cur?' selected':'')+'>'+esc(e)+'</option>').join('');chart();
 }
 $('empty').onclick=()=>start('Treino livre',[]);
+
 function prev(e,i){for(const h of hist(me)){const x=h.ex.find(y=>y.e===e);if(x&&x.s[i])return x.s[i]}return null}
 function start(n,ex){W={n,ph:'ck',pse:null,ck:{rec:0,sono:0,dor:false,locs:[],int:3,obs:''},t0:Date.now(),ex:ex.map(x=>({e:x.e,v:x.v||'',s:Array.from({length:x.k},()=>({kg:'',r:'',d:false,t:'N'}))}))};
  $('w').hidden=false;document.body.style.overflow='hidden';draw();clearInterval(tk);tk=setInterval(()=>{if(!W)return;const t=$('tm');if(t)t.textContent=mmss(Math.floor((Date.now()-W.t0)/1000));if(rest>0)rest--;const r=$('rs');if(r){r.hidden=rest<=0;r.firstChild.textContent=mmss(rest)}},1000)}
@@ -543,6 +532,7 @@ function drawW(){
  x.s.map((s,i)=>{const p=prev(x.e,i),n=x.s.slice(0,i).filter(q=>q.t==='N').length+1;return '<tr class="'+(s.d?'d':'')+'"><td><button class="ty t'+s.t+'" data-a="ty" data-x="'+xi+'" data-i="'+i+'">'+(s.t==='N'?n:s.t)+'</button></td><td class="mu" style="font-variant-numeric:tabular-nums">'+(p?fmt(p.kg)+'×'+p.r:'–')+'</td><td><input inputmode="decimal" data-k="kg" data-x="'+xi+'" data-i="'+i+'" value="'+esc(s.kg)+'" placeholder="'+(p?fmt(p.kg):'')+'"></td><td><input inputmode="numeric" data-k="r" data-x="'+xi+'" data-i="'+i+'" value="'+esc(s.r)+'" placeholder="'+(p?p.r:'')+'"></td><td><button class="ck" data-a="ck" data-x="'+xi+'" data-i="'+i+'">✓</button></td></tr>'}).join('')+
  '</table><button class="btn g" style="margin-top:8px;padding:10px;min-height:40px;font-size:.85rem" data-a="ad" data-x="'+xi+'">+ Série</button></div>').join('')+
  '<input class="t" id="ne" list="exl" placeholder="Adicionar exercício..."><button class="btn t" style="margin-top:10px" data-a="ae">+ Adicionar exercício</button></div>'}
+
 $('w').addEventListener('input',e=>{const t=e.target;if(t.dataset.k)W.ex[t.dataset.x].s[t.dataset.i][t.dataset.k]=t.value;else if(t.dataset.q==='int'){W.ck.int=+t.value;$('iv').textContent=t.value}else if(t.dataset.q==='obs')W.ck.obs=t.value});
 $('w').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||!W)return;const a=b.dataset.a,x=b.dataset.x,i=b.dataset.i;
  if(a==='q'){W.ck[b.dataset.q]=+b.dataset.v;draw()}
@@ -560,8 +550,9 @@ $('w').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||
  else if(a==='cancel')close_();
  else if(a==='end'){if(!W.ex.some(y=>y.s.some(s=>s.d))){close_();return}W.ph='pse';draw()}
  else if(a==='save'){if(W.pse===null)return;const ex=W.ex.map(y=>({e:y.e,s:y.s.filter(s=>s.d).map(s=>({kg:parseFloat(String(s.kg).replace(',','.')),r:parseInt(s.r),t:s.t}))})).filter(y=>y.s.length);
-  if(ex.length){const h=[{id:Date.now(),d:new Date().toISOString().slice(0,10),n:W.n,dur:Math.floor((Date.now()-W.t0)/1000),ex,pse:W.pse,ck:W.ck},...hist(me)].slice(0,120);D.treinos[me]={h};put('treinos/'+me,{h})}close_()}});
+  if(ex.length){const h=[{id:Date.now(),d:new Date().toISOString().slice(0,10),n:W.n,dur:Math.floor((Date.now()-W.t0)/1000),ex,pse:W.pse,ck:W.ck},...hist(me)];D.treinos[me]={h};save()}close_()}});
 function close_(){W=null;rest=0;clearInterval(tk);$('w').hidden=true;document.body.style.overflow='';view()}
+
 function chart(){
  const ex=$('sel').value,P=[];let mxl=0;
  [...hist(me)].reverse().forEach(h=>{const x=h.ex.find(y=>y.e===ex);if(!x)return;let b=0;work(x.s).forEach(s=>{b=Math.max(b,e1(s.kg,s.r));mxl=Math.max(mxl,s.kg)});if(b)P.push({d:h.d,v:b})});
@@ -575,7 +566,7 @@ $('sel').onchange=chart;
 
 function viewC(){
  const ids=Object.keys(D.perfis);
- if(!open||!D.perfis[open]){$('vt').innerHTML='<h2>Alunos</h2>'+(ids.length?ids.map(u=>'<div class="card"><h3>'+esc(D.perfis[u].n)+(u===me?' (você)':'')+'</h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)'+(hist(u)[0]?' · último em '+dt(hist(u)[0].d):'')+' · '+rts(u).length+' rotina(s)</div>'+(hist(u)[0]&&hist(u)[0].ck&&hist(u)[0].ck.dor?'<div class="bd warn">⚠ Dor relatada no último treino</div>':'')+'<button class="btn s" style="margin-top:12px" data-c="open" data-id="'+esc(u)+'">Abrir</button></div>').join(''):'<div class="card"><p class="mu">Nenhum aluno ainda. Compartilhe o link com seus alunos: quando abrirem e informarem o nome, eles aparecem aqui.</p></div>');return}
+ if(!open||!D.perfis[open]){$('vt').innerHTML='<h2>Alunos</h2>'+(ids.length?ids.map(u=>'<div class="card"><h3>'+esc(D.perfis[u].n)+(u===me?' (você)':'')+'</h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)'+(hist(u)[0]?' · último em '+dt(hist(u)[0].d):'')+' · '+rts(u).length+' rotina(s)</div>'+(hist(u)[0]&&hist(u)[0].ck&&hist(u)[0].ck.dor?'<div class="bd warn">⚠ Dor relatada no último treino</div>':'')+'<button class="btn s" style="margin-top:12px" data-c="open" data-id="'+esc(u)+'">Abrir</button></div>').join(''):'<div class="card"><p class="mu">Nenhum aluno ainda. O aluno acessa o link, coloca o nome e aparece aqui.</p></div>');return}
  const u=open,R=rts(u),best={};
  hist(u).forEach(h=>h.ex.forEach(x=>work(x.s).forEach(s=>{const v=e1(s.kg,s.r);if(!best[x.e]||v>best[x.e])best[x.e]=v})));
  let h='<button class="x" data-c="back">← Todos os alunos</button><h2 style="margin-top:4px;font-size:1.4rem">'+esc(D.perfis[u].n)+'</h2><h2>Rotinas</h2>';
@@ -584,9 +575,10 @@ function viewC(){
  h+='<h2>Melhor 1RM estimado</h2><div class="card">'+(Object.keys(best).length?Object.keys(best).sort().map(k=>'<div style="display:flex;justify-content:space-between;padding:4px 0"><span>'+esc(k)+'</span><b style="color:var(--pri)">'+fmt(best[k])+' kg</b></div>').join(''):'<span class="mu">Sem registros ainda.</span>')+'</div><h2>O que o aluno registrou</h2>'+histHTML(hist(u),{coach:1,cm:cms(u)});
  $('vt').innerHTML=h;
 }
+
 $('vt').addEventListener('input',e=>{const t=e.target;if(!ed)return;if(t.dataset.ed)ed.n=t.value;else if(t.dataset.f){const x=ed.ex[t.dataset.i];x[t.dataset.f]=t.dataset.f==='k'?(parseInt(t.value)||1):t.value}});
 $('vt').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;const c=b.dataset.c,id=b.dataset.id,i=b.dataset.i,u=open;
- const saveR=r=>{D.rotinas[u]={rt:r};put('rotinas/'+u,{rt:r})};
+ const saveR=r=>{D.rotinas[u]={rt:r};save()};
  if(c==='open'){open=id;ed=null}
  else if(c==='back'){open=null;ed=null}
  else if(c==='newR')ed={rid:null,n:'',ex:[{e:'',k:3,v:''}]};
@@ -598,9 +590,10 @@ $('vt').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)
  else if(c==='saveR'){const ex=ed.ex.filter(x=>x.e.trim()).map(x=>({e:x.e.trim(),k:x.k||3,v:/^https?:\/\//i.test(x.v.trim())?x.v.trim():''}));
   if(!ed.n.trim()||!ex.length)return;const r={id:ed.rid||Date.now(),n:ed.n.trim(),ex};
   saveR(ed.rid?rts(u).map(x=>x.id===ed.rid?r:x):[...rts(u),r]);ed=null}
- else if(c==='cm'){const w=b.dataset.w,t=$('c'+w).value.trim(),m={...cms(u)};if(t)m[w]=t;else delete m[w];D.coment[u]={c:m};put('coment/'+u,{c:m});document.activeElement.blur()}
+ else if(c==='cm'){const w=b.dataset.w,t=$('c'+w).value.trim(),m={...cms(u)};if(t)m[w]=t;else delete m[w];D.coment[u]={c:m};save();document.activeElement.blur()}
  view()});
-init();
+
+view();
 </script>
 </body>
 </html>
