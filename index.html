@@ -741,7 +741,6 @@ const BANCO_EXER_PADRAO = [
 ];
 
 let BANCO_EXER = JSON.parse(localStorage.getItem('reis_banco_exer')) || BANCO_EXER_PADRAO;
-let geminiApiKey = localStorage.getItem('reis_gemini_key') || '';
 
 let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}, habitos:{}, cooper:{}, cooperHabilitado:{}, templates:{}, financeiro:{}, avisosCoach:{}};
 let isLoaded = false; 
@@ -2237,7 +2236,7 @@ function viewC(){
        return '<div class="edr">'+
        '<div style="display:flex; gap:8px; align-items:center; margin-bottom:8px">'+
        '<select style="max-width:130px; font-size:0.75rem; padding:6px" onchange="ed.ex['+exerIdx+'].grupo=this.value">'+
-       '<option value="" '+(!x.grupo?'selected':''+'>Exercício Normal</option>'+
+       '<option value="" '+(!x.grupo?'selected':'')+'>Exercício Normal</option>'+
        '<option value="Bi-set A" '+(x.grupo==='Bi-set A'?'selected':'')+'>Bi-set A</option>'+
        '<option value="Bi-set B" '+(x.grupo==='Bi-set B'?'selected':'')+'>Bi-set B</option>'+
        '<option value="Tri-set" '+(x.grupo==='Tri-set'?'selected':'')+'>Tri-set / Super</option>'+
