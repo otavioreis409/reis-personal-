@@ -43,12 +43,12 @@
   --sh:0 4px 20px rgba(0,0,0,.35);
   --sh-float:0 10px 30px rgba(0,0,0,.7);
   --fh:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;
-  color-scheme:dark;
+  color-scheme: dark;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px); color-scheme: dark;}
 body{
   margin:0;
   background:var(--bg);
@@ -58,6 +58,7 @@ body{
   line-height:1.45;
   padding-bottom:104px;
   -webkit-font-smoothing:antialiased;
+  color-scheme: dark;
 }
 .top{
   position:sticky;
@@ -372,8 +373,13 @@ input.t,select,textarea.t{
   color:var(--tx);
   font-size:.95rem;
   font-family:inherit;
+  color-scheme: dark;
 }
 input.t:focus,select:focus,textarea.t:focus{border-color:var(--pri);outline:none}
+select option {
+  background-color: var(--card);
+  color: var(--tx);
+}
 .edr{border-top:1px solid var(--ln);padding-top:14px;margin-top:14px}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
 
