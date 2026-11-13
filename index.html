@@ -803,6 +803,44 @@ let me = urlAluno ? ('aluno_' + slugify(urlAluno)) : '';
 let coachView = !urlAluno && localStorage.getItem('reis_coach') === '1', coachTab = 'inicio', tab = 0, W = null, tk = null, rest = 0, ed = null, edTpl = null, open = null;
 let filtroMusculoAtual = 'Todos';
 
+function calcularPacesCooper(alunoId){
+  const list = (D.cooper && D.cooper[alunoId]) || [];
+  if(!list.length) return null;
+  const ultimo = list[0];
+  const vMps = ultimo.dist / 720; 
+  if(vMps <= 0) return null;
+  const paceSecKm = 1000 / vMps;
+
+  // Zonas baseadas em percentuais de velocidade / pace
+  // Z1 (Regenerativo): ~60-70% da velocidade (pace mais lento)
+  // Z2 (Aeróbico Base): ~70-80%
+  // Z3 (Tempo / Moderado): ~80-90%
+  // Z4 (Limiar): ~90-100%
+  // Z5 (VO2máx): >100%
+  
+  const pZ1 = paceSecKm * 1.35;
+  const pZ2 = paceSecKm * 1.20;
+  const pZ3 = paceSecKm * 1.08;
+  const pZ4 = paceSecKm * 1.00;
+  const pZ5 = paceSecKm * 0.90;
+
+  const fmtPace = sec => {
+    const m = Math.floor(sec / 60);
+    const s = Math.round(sec % 60);
+    return m + ':' + String(s).padStart(2, '0') + ' min/km';
+  };
+
+  return {
+    Z1: fmtPace(pZ1),
+    Z2: fmtPace(pZ2),
+    Z3: fmtPace(pZ3),
+    Z4: fmtPace(pZ4),
+    Z5: fmtPace(pZ5),
+    distUltimo: ultimo.dist,
+    dataUltimo: ultimo.d
+  };
+}
+
 async function loadFromCloud(){
   try {
     const doc = await db.collection('app').doc('reis_db').get();
@@ -1071,20 +1109,18 @@ function renderZonasCooperAluno(){
     return;
   }
 
-  const ultimo = list[0];
-  const vMps = ultimo.dist / 720; 
-  const paceSecKm = vMps > 0 ? 1000 / vMps : 0;
-  const paceMin = Math.floor(paceSecKm / 60);
-  const paceSec = Math.round(paceSecKm % 60);
+  const paces = calcularPacesCooper(me);
+  if(!paces) return;
 
   container.innerHTML = `
     <div style="background:var(--pill); padding:10px; border-radius:10px; font-size:0.85rem; display:grid; gap:4px">
-      <div><b>📅 Último Teste (${dt(ultimo.d)}):</b> ${ultimo.dist} metros</div>
-      <div><b>🔥 VO2máx Estimado:</b> <b style="color:var(--pri)">${fmt(ultimo.vo2)} ml/kg/min</b></div>
-      <div style="margin-top:4px; border-top:1px solid var(--ln); padding-top:4px"><b>⚡ Zonas de Ritmo Sugeridas pela IA:</b></div>
-      <div class="mu">• Zona 1 (Regenerativo): ${paceMin+2}:${String(paceSec).padStart(2,'0')} - ${paceMin+3}:00 min/km</div>
-      <div class="mu">• Zona 2 (Aeróbico Base): ${paceMin+1}:${String(paceSec+30 > 59 ? 30 : paceSec+30)} - ${paceMin+2}:30 min/km</div>
-      <div class="mu">• Zona 4/5 (Limiar / VO2máx): ${paceMin}:${String(paceSec).padStart(2,'0')} min/km ou mais rápido</div>
+      <div><b>📅 Último Teste (${dt(paces.dataUltimo)}):</b> ${paces.distUltimo} metros</div>
+      <div style="margin-top:4px; border-top:1px solid var(--ln); padding-top:4px"><b>⚡ Ritmos Ideais por Zona (Baseado no Cooper):</b></div>
+      <div class="mu">• <b>Z1 (Regenerativo):</b> ${paces.Z1}</div>
+      <div class="mu">• <b>Z2 (Aeróbico Base):</b> ${paces.Z2}</div>
+      <div class="mu">• <b>Z3 (Tempo / Moderado):</b> ${paces.Z3}</div>
+      <div class="mu">• <b>Z4 (Limiar):</b> ${paces.Z4}</div>
+      <div class="mu">• <b>Z5 (VO2máx):</b> ${paces.Z5}</div>
     </div>
   `;
 }
@@ -1228,9 +1264,32 @@ function renderW(){
   h += `<main style="padding-top:16px">`;
   
   if(isRun){
+    const pacesAluno = calcularPacesCooper(me);
+    if(pacesAluno){
+      h += `<div class="card" style="border-left: 3px solid var(--acc); margin-bottom: 16px;">
+        <h3 style="color:var(--acc); font-size:0.95rem">⚡ Seus Ritmos por Zona (Cooper)</h3>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin-top:8px; font-size:0.82rem">
+          <div><b>Z1:</b> ${pacesAluno.Z1}</div>
+          <div><b>Z2:</b> ${pacesAluno.Z2}</div>
+          <div><b>Z3:</b> ${pacesAluno.Z3}</div>
+          <div><b>Z4:</b> ${pacesAluno.Z4}</div>
+          <div style="grid-column: span 2"><b>Z5:</b> ${pacesAluno.Z5}</div>
+        </div>
+      </div>`;
+    }
+
     h += `<div class="card"><h3>Registro de Corrida</h3>`;
     w.ex.forEach((x, i)=>{
-      h += `<div style="margin-top:12px"><label class="mu" style="font-size:0.75rem"><b>${esc(x.e)}</b> (Alvo: ${esc(x.dist||'-')} · ${esc(x.zona||'Z2')})</label><input class="t" id="run_res_${i}" placeholder="Ex: Feito 5.2 km em 28 min" style="margin-top:4px" value="${esc(x.realizado||'')}" oninput="W.ex[${i}].realizado=this.value;saveActiveWorkout()"></div>`;
+      let paceSugeridoText = '';
+      if(pacesAluno && x.zona){
+        if(x.zona === 'Z1') paceSugeridoText = ` (Ritmo ideal: ${pacesAluno.Z1})`;
+        if(x.zona === 'Z2') paceSugeridoText = ` (Ritmo ideal: ${pacesAluno.Z2})`;
+        if(x.zona === 'Z3') paceSugeridoText = ` (Ritmo ideal: ${pacesAluno.Z3})`;
+        if(x.zona === 'Z4') paceSugeridoText = ` (Ritmo ideal: ${pacesAluno.Z4})`;
+        if(x.zona === 'Z5') paceSugeridoText = ` (Ritmo ideal: ${pacesAluno.Z5})`;
+      }
+
+      h += `<div style="margin-top:12px"><label class="mu" style="font-size:0.75rem"><b>${esc(x.e)}</b> (Alvo: ${esc(x.dist||'-')} · Zona: <b style="color:var(--pri)">${esc(x.zona||'Z2')}</b>)${paceSugeridoText}</label><input class="t" id="run_res_${i}" placeholder="Ex: Feito 5.2 km em 28 min" style="margin-top:4px" value="${esc(x.realizado||'')}" oninput="W.ex[${i}].realizado=this.value;saveActiveWorkout()"></div>`;
     });
     h += `</div>`;
   } else {
@@ -1691,10 +1750,18 @@ function viewC(){
   }
 
   const cooperList = (D.cooper && D.cooper[u]) || [];
+  const pacesCoach = calcularPacesCooper(u);
   let cooperCoachHtml = '<p class="mu">Nenhum teste de Cooper registrado.</p>';
   if(cooperList.length){
     const ult = cooperList[0];
-    cooperCoachHtml = `<div style="font-size:0.88rem; display:grid; gap:4px"><div><b>Último Teste (${dt(ult.d)}):</b> ${ult.dist} metros</div><div><b>VO2máx:</b> <span style="color:var(--pri)">${fmt(ult.vo2)} ml/kg/min</span></div></div>`;
+    cooperCoachHtml = `<div style="font-size:0.88rem; display:grid; gap:6px">
+      <div><b>Último Teste (${dt(ult.d)}):</b> ${ult.dist} metros</div>
+      <div><b>VO2máx:</b> <span style="color:var(--pri)">${fmt(ult.vo2)} ml/kg/min</span></div>
+      ${pacesCoach ? `<div style="margin-top:4px; border-top:1px solid var(--ln); padding-top:4px"><b>⚡ Ritmos Ideais Calculados (Pace):</b><br>
+        • Z1: ${pacesCoach.Z1} | Z2: ${pacesCoach.Z2} | Z3: ${pacesCoach.Z3}<br>
+        • Z4: ${pacesCoach.Z4} | Z5: ${pacesCoach.Z5}
+      </div>` : ''}
+    </div>`;
   }
 
   h='<button class="x" data-c="back">← Todos os alunos</button><h2 style="margin-top:4px;font-size:1.4rem">'+esc(D.perfis[u].n)+'</h2>';
@@ -1711,7 +1778,7 @@ function viewC(){
      '<div><b>Dores articulares:</b> <span style="color:'+(anam.dor&&anam.dor.toLowerCase()!=='nenhuma'?'var(--danger)':'var(--ok)')+'">'+(anam.dor||'Nenhuma relatada')+'</span></div>'+
      '</div></div>';
 
-  h+='<div class="card"><h3>🏃 Teste de Cooper (Cardio)</h3><div style="margin-top:8px">'+cooperCoachHtml+'</div></div>';
+  h+='<div class="card"><h3>🏃 Teste de Cooper & Ritmos</h3><div style="margin-top:8px">'+cooperCoachHtml+'</div></div>';
 
   h+='<h2>Rotinas de Treino</h2>';
   if(ed){
@@ -1730,6 +1797,12 @@ function viewC(){
       '</select>';
    
    if(isRunEd){
+     if(pacesCoach){
+       h += `<div style="background:var(--pill); padding:10px; border-radius:8px; margin-bottom:10px; font-size:0.82rem">
+         <b>⚡ Referência de Pace do Aluno:</b><br>
+         Z1: ${pacesCoach.Z1} | Z2: ${pacesCoach.Z2} | Z3: ${pacesCoach.Z3} | Z4: ${pacesCoach.Z4} | Z5: ${pacesCoach.Z5}
+       </div>`;
+     }
      h += ed.ex.map((x,i)=>'<div class="edr">'+
        '<input class="t" data-i="'+i+'" data-f="e" value="'+esc(x.e)+'" placeholder="Bloco (ex: Aquecimento)">'+
        '<div class="two">'+
@@ -2066,10 +2139,11 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   ed=null;
  }
  else if(c==='cm'){
-  const w=b.dataset.w,t=$('c'+w).value.trim();
+  const w=b.dataset.w,t=$('c'+w).value.tabIndex;
   if(!D.coment) D.coment = {};
   const m={...cms(u)};
-  if(t) m[w]=t; else delete m[w];
+  const valTxt = $('c'+w).value.trim();
+  if(valTxt) m[w]=valTxt; else delete m[w];
   D.coment[u]={c:m}; 
   await savePartial('coment', u, D.coment[u]);
   document.activeElement.blur();
