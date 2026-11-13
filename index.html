@@ -681,21 +681,35 @@ const BANCO_EXER = [
   { n: "Supino Reto com Barra", m: "Peitoral", v: "https://www.youtube.com/watch?v=rT7DgCr-3pg" },
   { n: "Supino Inclinado com Halteres", m: "Peitoral", v: "https://www.youtube.com/watch?v=5xPuvmUnzZ8" },
   { n: "Crucifixo na Polia", m: "Peitoral", v: "" },
+  { n: "Supino Declinado com Barra", m: "Peitoral", v: "" },
+  { n: "Flexão de Braços no Solo", m: "Peitoral", v: "" },
   { n: "Agachamento Livre", m: "Pernas", v: "https://www.youtube.com/watch?v=aclHkVaku9U" },
   { n: "Leg Press 45º", m: "Pernas", v: "https://www.youtube.com/watch?v=IZxyjW7MPJQ" },
   { n: "Cadeira Extensora", m: "Pernas", v: "" },
   { n: "Mesa Flexora", m: "Pernas", v: "" },
+  { n: "Afundo com Halteres", m: "Pernas", v: "" },
+  { n: "Stiff com Barra", m: "Pernas", v: "" },
+  { n: "Elevação Pélvica na Máquina", m: "Pernas", v: "" },
   { n: "Puxada Alta na Polia", m: "Costas", v: "https://www.youtube.com/watch?v=CAwf7n6Luuc" },
   { n: "Remada Curvada com Barra", m: "Costas", v: "https://www.youtube.com/watch?v=vT2GjY_Umpw" },
   { n: "Remada Baixa na Polia", m: "Costas", v: "" },
+  { n: "Barra Fixa Pronada", m: "Costas", v: "" },
+  { n: "Remada Unilateral com Halter (Serrote)", m: "Costas", v: "" },
   { n: "Elevação Lateral com Halteres", m: "Ombros", v: "https://www.youtube.com/watch?v=3VscugTfxzo" },
   { n: "Desenvolvimento com Halteres", m: "Ombros", v: "" },
+  { n: "Elevação Frontal com Halteres", m: "Ombros", v: "" },
+  { n: "Crucifixo Inverso na Polia", m: "Ombros", v: "" },
   { n: "Rosca Direta com Barra", m: "Bíceps", v: "https://www.youtube.com/watch?v=ykJmrZ5v0Oo" },
-  { n: "Rosca Martelo", m: "Bíceps", v: "" },
-  { n: "Tríceps Testa com Barra", m: "Tríceps", v: "https://www.youtube.com/watch?v=d_KZxkY_0cM" },
+  { n: "Rosca Martelo com Halteres", m: "Bíceps", v: "" },
+  { n: "Rosca Scott com Barra W", m: "Bíceps", v: "" },
+  { n: "Tríceps Testa com Barra W", m: "Tríceps", v: "https://www.youtube.com/watch?v=d_KZxkY_0cM" },
   { n: "Tríceps na Polia com Corda", m: "Tríceps", v: "" },
+  { n: "Tríceps Mergulho nas Paralelas", m: "Tríceps", v: "" },
   { n: "Panturrilhas em Pé na Máquina", m: "Panturrilhas", v: "" },
-  { n: "Abdominal Supra no Solo", m: "Abdômen", v: "" }
+  { n: "Panturrilhas Sentado no Solear", m: "Panturrilhas", v: "" },
+  { n: "Abdominal Supra no Solo", m: "Abdômen", v: "" },
+  { n: "Abdominal Infra na Barra Fixa", m: "Abdômen", v: "" },
+  { n: "Prancha Abdominal Isométrica", m: "Abdômen", v: "" }
 ];
 
 function formatPace(minPerKm){
@@ -745,7 +759,7 @@ async function loadFromCloud(){
     let nomeFormatado = urlAluno.charAt(0).toUpperCase() + urlAluno.slice(1);
     if(!D.perfis) D.perfis = {};
     if(!D.perfis[me]) {
-      D.perfis[me] = {n: nomeFormatado};
+      D.perfis[me] = {n: nomeFormatado, valor: 150};
       save();
     }
   }
@@ -1159,13 +1173,22 @@ async function togglePagamento(u, status){
   view();
 }
 
+async function atualizarValorAluno(u, novoValor){
+  const val = parseFloat(novoValor);
+  if(isNaN(val)) return;
+  if(!D.perfis[u]) D.perfis[u] = {};
+  D.perfis[u].valor = val;
+  await save();
+}
+
 function abrirBuscaExercicios(exerIdx){
+  window.currentExIdx = exerIdx;
   const modal = $('modalBuscaEx');
   modal.hidden = false;
   modal.innerHTML = `
     <div class="modal-box">
       <div style="display:flex; justify-content:space-between; align-items:center">
-        <h3>🔍 Banco de Exercícios</h3>
+        <h3>🔍 Banco de Exercícios PT-BR</h3>
         <button class="x" onclick="$('modalBuscaEx').hidden=true">✕ Fechar</button>
       </div>
       <input class="t" id="filtroExInput" placeholder="Digite para filtrar (ex: Supino, Rosca...)" style="margin-top:10px" oninput="filtrarModalEx()">
@@ -1195,7 +1218,6 @@ function filtrarModalEx(){
 }
 
 function selecionarExercicioModal(exerIdx, nomeEx, videoUrl){
-  window.currentExIdx = exerIdx;
   ed.ex[exerIdx].e = nomeEx;
   ed.ex[exerIdx].v = videoUrl;
   $('modalBuscaEx').hidden = true;
@@ -1212,9 +1234,10 @@ function viewC(){
  const mesAtual = new Date().toISOString().slice(0,7);
 
  let totalAlunos = ids.length;
- let treinosHojeCount = 0;
  let pendenciasCount = 0;
  let somaAderencia = 0;
+ let receitaEsperadaTotal = 0;
+ let receitaRecebidaTotal = 0;
 
  ids.forEach(u => {
    const tMes = hist(u).filter(item => item.d && item.d.startsWith(mesAtual)).length;
@@ -1223,9 +1246,15 @@ function viewC(){
    const metaM = metaD * 4;
    somaAderencia += Math.min(100, Math.round((tMes / metaM) * 100));
 
-   // Pendência se pagamento estiver pendente
+   const valorMensal = parseFloat(D.perfis[u].valor) || 0;
+   receitaEsperadaTotal += valorMensal;
+
    const pago = D.financeiro && D.financeiro[u] && D.financeiro[u][mesAtual];
-   if(!pago) pendenciasCount++;
+   if(pago) {
+     receitaRecebidaTotal += valorMensal;
+   } else {
+     pendenciasCount++;
+   }
  });
 
  const mediaAderencia = totalAlunos > 0 ? Math.round(somaAderencia / totalAlunos) : 0;
@@ -1256,8 +1285,8 @@ function viewC(){
         <b>${totalAlunos}</b>
       </div>
       <div class="kpi-card">
-        <span class="mu">Treinos no mês</span>
-        <b>${ids.reduce((acc, u)=>acc + hist(u).filter(i=>i.d&&i.d.startsWith(mesAtual)).length, 0)}</b>
+        <span class="mu">Receita Prevista</span>
+        <b style="color:var(--pri)">R$ ${fmt(receitaEsperadaTotal)}</b>
       </div>
       <div class="kpi-card">
         <span class="mu">Pendências</span>
@@ -1276,7 +1305,7 @@ function viewC(){
     <div class="card" style="border-left: 3px solid var(--pri); margin-bottom: 20px;">
      <h3 style="color:var(--pri)">💰 Controlo Financeiro (${mesAtual})</h3>
      <p class="mu" style="margin-top:6px; font-size:0.86rem; line-height:1.5">
-      Acompanhe rapidamente quais alunos estão em dia com os pagamentos deste mês.
+      Recebido: <b style="color:var(--ok)">R$ ${fmt(receitaRecebidaTotal)}</b> de <b style="color:var(--tx)">R$ ${fmt(receitaEsperadaTotal)}</b> previstos.
      </p>
     </div>
    `;
@@ -1284,11 +1313,13 @@ function viewC(){
    if(ids.length){
      h += `<div class="card" style="overflow-x:auto">
       <table style="font-size:0.85rem">
-        <tr><th>Aluno</th><th>Mensalidade</th><th>Ação rápida</th></tr>`;
+        <tr><th>Aluno</th><th>Valor Mensal</th><th>Status</th><th>Ação</th></tr>`;
      h += ids.map(u => {
        const pago = D.financeiro && D.financeiro[u] && D.financeiro[u][mesAtual];
+       const val = D.perfis[u].valor || 0;
        return `<tr>
          <td><b>${esc(D.perfis[u].n)}</b></td>
+         <td><input type="number" style="max-width:90px; text-align:center" value="${val}" onchange="atualizarValorAluno('${u}', this.value)" placeholder="R$"></td>
          <td><span class="bd ${pago ? 'ok' : 'warn'}">${pago ? '✓ Pago' : '⚠️ Pendente'}</span></td>
          <td><button class="btn s ${pago ? 'g' : 't'}" style="padding:4px 10px; font-size:0.75rem" onclick="togglePagamentoPin('${u}', ${!pago})">${pago ? 'Marcar Pendente' : 'Confirmar'}</button></td>
        </tr>`;
@@ -1312,8 +1343,8 @@ function viewC(){
        const t = templates[tid];
        return `<div class="card" style="display:flex; justify-content:space-between; align-items:center">
          <div><h3>${esc(t.n)}</h3><div class="mu">${t.ex.length} exercício(s) cadastrados</div></div>
-         <div>
-           <button class="btn s t" style="margin:0" data-c="aplicarTemplate" data-tid="${tid}">Aplicar</button>
+         <div style="display:flex; gap:6px">
+           <button class="btn s t" style="margin:0" data-c="aplicarTemplateGlobal" data-tid="${tid}">Aplicar a Aluno</button>
            <button class="x" data-c="delTemplate" data-tid="${tid}" style="color:var(--danger)">Excluir</button>
          </div>
        </div>`;
@@ -1333,6 +1364,7 @@ function viewC(){
     h+=ids.map(u=>{
      const checked = (D.checks||{})[u] ? 'checked' : '';
      const alunoNomeOriginal = D.perfis[u].n;
+     const valorMensal = D.perfis[u].valor || 0;
      const nomeParam = slugify(alunoNomeOriginal);
      const linkAluno = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + '?aluno=' + nomeParam;
      
@@ -1342,22 +1374,8 @@ function viewC(){
      const treinosMes = hist(u).filter(item => item.d && item.d.startsWith(mesAtual)).length;
      const aderenciaPct = Math.min(100, Math.round((treinosMes / metaMes) * 100));
 
-     const hLst = hist(u).filter(item=>item.tipo!=='corrida');
-     let alertAnalytics = '<span class="mu" style="font-size:0.75rem">Sem dados suficientes para analytics</span>';
-     if(hLst.length >= 2){
-       const ultimo = hLst[0];
-       const penultimo = hLst[1];
-       const volUltimo = ultimo.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*s.r,0),0);
-       const volPenultimo = penultimo.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*s.r,0),0);
-       if(volUltimo > volPenultimo){
-         alertAnalytics = '<span style="color:var(--ok); font-size:0.78rem; font-weight:700">📈 Em progressão de carga recente!</span>';
-       } else {
-         alertAnalytics = '<span style="color:var(--wn-tx); font-size:0.78rem; font-weight:700">⚠️ Volume estável ou em estagnação</span>';
-       }
-     }
-
      return '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'+
-     '<div style="display:flex;align-items:center;gap:10px"><input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" '+checked+' style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer"><div><h3>'+esc(alunoNomeOriginal)+'</h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)'+(hist(u)[0]?' · último em '+dt(hist(u)[0].d):'')+'</div><div style="margin-top:2px"><span class="bd ok" style="margin:2px 0">📊 Aderência: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+')</span></div><div style="margin-top:2px">'+alertAnalytics+'</div>'+(hist(u)[0]&&hist(u)[0].ck&&hist(u)[0].ck.dor?'<div class="bd warn" style="margin-top:4px">⚠ Dor relatada no último treino</div>':'')+'<div style="margin-top:6px; display:flex; gap:6px"><button class="btn s g" style="padding:6px 10px;font-size:.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link</button><button class="btn s t" style="padding:6px 10px;font-size:.75rem; margin:0" data-c="gerarPDF" data-id="'+esc(u)+'">📄 PDF</button></div></div></div>'+
+     '<div style="display:flex;align-items:center;gap:10px"><input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" '+checked+' style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer"><div><h3>'+esc(alunoNomeOriginal)+' <span style="font-size:0.85rem; color:var(--pri); font-weight:700">· R$ '+fmt(valorMensal)+'</span></h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)</div><div style="margin-top:2px"><span class="bd ok" style="margin:2px 0">📊 Aderência: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+')</span></div><div style="margin-top:6px; display:flex; gap:6px"><button class="btn s g" style="padding:6px 10px;font-size:.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link</button><button class="btn s t" style="padding:6px 10px;font-size:.75rem; margin:0" data-c="gerarPDF" data-id="'+esc(u)+'">📄 PDF</button></div></div></div>'+
      '<div><button class="btn s" data-c="open" data-id="'+esc(u)+'">Abrir</button><button class="x" data-c="delAluno" data-id="'+esc(u)+'" style="color:var(--danger)">Excluir</button></div></div></div>';
     }).join('');
    } else {
@@ -1381,13 +1399,11 @@ function viewC(){
     imcText = fmt(imc) + ' (' + classif + ')';
   }
 
-  const cooperDist = (D.corrida && D.corrida[u] && D.corrida[u].cooper) || '';
-  const runData = calcRunningZones(cooperDist);
-
   h='<button class="x" data-c="back">← Todos os alunos</button><h2 style="margin-top:4px;font-size:1.4rem">'+esc(D.perfis[u].n)+'</h2>';
   
   h+='<div class="card"><h3>📊 Anamnese e Avaliação</h3>'+
      '<div style="margin-top:8px; display:grid; gap:4px; font-size:0.9rem">'+
+     '<div><b>Valor Mensalidade:</b> R$ <input type="number" style="max-width:100px; display:inline-block; padding:4px" value="'+(D.perfis[u].valor||0)+'" onchange="atualizarValorAluno(\''+u+'\', this.value)"></div>'+
      '<div><b>Altura:</b> '+(anam.alt?anam.alt+' m':'Não informada')+'</div>'+
      '<div><b>Peso atual:</b> '+(anam.peso?anam.peso+' kg':'Não informado')+'</div>'+
      '<div><b>IMC:</b> <span style="color:var(--pri)">'+imcText+'</span></div>'+
@@ -1397,39 +1413,6 @@ function viewC(){
      '<div><b>Dores articulares:</b> <span style="color:'+(anam.dor&&anam.dor.toLowerCase()!=='nenhuma'?'var(--danger)':'var(--ok)')+'">'+(anam.dor||'Nenhuma relatada')+'</span></div>'+
      '</div></div>';
 
-  h+='<h2>🏃 Avaliação de Corrida & Zonas (Cooper 12 min)</h2>'+
-     '<div class="card" style="border-left: 3px solid var(--acc)">'+
-     '<label class="mu" style="font-size:0.78rem">Distância percorrida no Teste de Cooper 12 min (em metros):</label>'+
-     '<div style="display:flex; gap:8px; margin-top:6px">'+
-     '<input class="t" id="inpCooper" type="number" min="500" max="6000" value="'+esc(cooperDist)+'" placeholder="Ex: 2600">'+
-     '<button class="btn s t" style="margin:0; white-space:nowrap" data-c="calcCooper">Calcular Zonas</button>'+
-     '</div>';
-  
-  if(runData){
-    h+='<div style="margin-top:12px; padding-top:12px; border-top:1px solid var(--ln)">'+
-       '<div style="display:flex; justify-content:space-between; font-size:0.88rem; margin-bottom:10px">'+
-       '<span><b>VO₂máx est.:</b> <span style="color:var(--pri)">'+fmt(runData.vo2)+' ml/kg/min</span></span>'+
-       '<span><b>VAM (100%):</b> <span style="color:var(--acc)">'+runData.vamPace+' ('+fmt(runData.vamKmh)+' km/h)</span></span>'+
-       '</div>'+
-       '<table class="z-table"><tr><th>Zona</th><th>Objetivo</th><th>% VAM</th><th>Pace Alvo</th></tr>'+
-       runData.zones.map(z=>'<tr><td><span class="z-badge '+z.z.toLowerCase()+'">'+z.z+'</span></td><td><b>'+z.nome+'</b><div class="mu" style="font-size:0.7rem">'+z.desc+'</div></td><td>'+z.pct+'</td><td><b style="color:var(--pri)">'+z.paceRange+'</b></td></tr>').join('')+
-       '</table></div>';
-  } else {
-    h+='<p class="mu" style="margin-top:8px">Insira a distância em metros do teste de 12 minutos para gerar as zonas de treino de corrida.</p>';
-  }
-  h+='</div>';
-
-  const hList = hist(u);
-  h+='<h2>📈 Tabela de Melhora / Histórico</h2>'+
-     '<div class="card" style="overflow-x:auto">'+
-     (hList.length ? '<table style="font-size:0.85rem"><tr><th>Data</th><th>Treino</th><th>Duração</th><th>Volume / Tipo</th><th>PSE</th></tr>'+
-      hList.map(w=>{
-        const isRun = w.tipo === 'corrida';
-        const vol = isRun ? '🏃 Corrida' : fmt(w.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*s.r,0),0)) + ' kg';
-        return '<tr><td>'+dt(w.d)+'</td><td><b>'+esc(w.n)+'</b></td><td>'+mmss(w.dur)+'</td><td>'+vol+'</td><td>'+(w.pse!=null?w.pse+'/10':'–')+'</td></tr>';
-      }).join('')+'</table>' : '<span class="mu">Nenhum treino registrado ainda para gerar tabela.</span>')+
-     '</div>';
-
   h+='<h2>Rotinas de Treino</h2>';
   if(ed){
    const isRunEd = ed.tipo === 'corrida';
@@ -1438,59 +1421,29 @@ function viewC(){
       '<button class="chip '+(!isRunEd?'on':'')+'" data-c="setTipoEd" data-tipo="musculacao">🏋️ Musculação</button>'+
       '<button class="chip '+(isRunEd?'on':'')+'" data-c="setTipoEd" data-tipo="corrida">🏃 Corrida</button>'+
       '</div>'+
-      '<input class="t" data-ed="n" value="'+esc(ed.n)+'" placeholder="'+(isRunEd?'Nome do treino (ex: Corrida Intervalada Z4/Z5)':'Nome da rotina (ex: Treino A - Superior)')+'">';
+      '<input class="t" data-ed="n" value="'+esc(ed.n)+'" placeholder="'+(isRunEd?'Nome do treino':'Nome da rotina (ex: Treino A - Superior)')+'">';
    
    if(isRunEd){
      h += ed.ex.map((x,i)=>'<div class="edr">'+
-       '<input class="t" data-i="'+i+'" data-f="e" value="'+esc(x.e)+'" placeholder="Bloco (ex: Aquecimento, Tiros 400m, Solto)">'+
+       '<input class="t" data-i="'+i+'" data-f="e" value="'+esc(x.e)+'" placeholder="Bloco (ex: Aquecimento)">'+
        '<div class="two">'+
-       '<div><label class="mu" style="font-size:0.75rem">Distância ou Tempo</label><input class="t" data-i="'+i+'" data-f="dist" value="'+esc(x.dist||'')+'" placeholder="Ex: 5 km ou 20 min"></div>'+
-       '<div><label class="mu" style="font-size:0.75rem">Zona de Intensidade</label><select data-i="'+i+'" data-f="zona">'+
-       ['Z1','Z2','Z3','Z4','Z5'].map(z=>{
-         const zInfo = runData ? runData.zones.find(item=>item.z===z) : null;
-         const label = z + (zInfo ? ' ('+zInfo.paceRange+')' : '');
-         return '<option value="'+z+'" '+(x.zona===z?'selected':'')+'>'+label+'</option>';
-       }).join('')+
+       '<div><label class="mu" style="font-size:0.75rem">Distância ou Tempo</label><input class="t" data-i="'+i+'" data-f="dist" value="'+esc(x.dist||'')+'" placeholder="Ex: 5 km"></div>'+
+       '<div><label class="mu" style="font-size:0.75rem">Zona</label><select data-i="'+i+'" data-f="zona">'+
+       ['Z1','Z2','Z3','Z4','Z5'].map(z=>'<option value="'+z+'" '+(x.zona===z?'selected':'')+'>'+z+'</option>').join('')+
        '</select></div></div>'+
        '<button class="x" data-c="rmE" data-i="'+i+'" style="margin-top:8px">Remover bloco</button></div>').join('')+
        '<button class="btn g" style="margin-top:10px" data-c="addERun">+ Bloco de Corrida</button>';
    } else {
      h += ed.ex.map((x,i)=>{
        const exerIdx = i;
-       
-       let lastPerfText = '';
-       let recRpeText = '';
-       const alunoHist = hist(u).filter(item=>item.tipo!=='corrida');
-       for(const th of alunoHist){
-         const foundEx = th.ex.find(item=>item.e.toLowerCase() === (x.e||'').toLowerCase());
-         if(foundEx && foundEx.s && foundEx.s.length){
-           lastPerfText = '💡 Último registro ('+dt(th.d)+'): ' + foundEx.s.map(s=>fmt(s.kg)+'kg×'+s.r).join(' | ');
-           
-           const ultS = foundEx.s[foundEx.s.length - 1];
-           if(ultS && ultS.kg > 0 && ultS.r > 0){
-             const est1RM = e1(ultS.kg, ultS.r);
-             const sugeridoKg = est1RM * 0.78;
-             recRpeText = '🧠 Sugestão IA (Base 1RM ' + fmt(est1RM) + 'kg): Próxima carga sugerida ~' + fmt(sugeridoKg) + 'kg';
-           }
-           break;
-         }
-       }
-
        return '<div class="edr">'+
        '<div style="display:flex; gap:8px; align-items:center">'+
        '<input class="t" data-ex="'+exerIdx+'" data-f="e" value="'+esc(x.e)+'" placeholder="Nome do exercício" style="flex:1">'+
        '<button class="btn s t" style="margin:0; white-space:nowrap" onclick="abrirBuscaExercicios('+exerIdx+')">🔍 Buscar</button>'+
        '</div>'+
-       (lastPerfText ? '<div class="mu" style="margin-top:4px; font-size:0.78rem; color:var(--pri)">'+lastPerfText+'</div>' : '')+
-       (recRpeText ? '<div class="mu" style="margin-top:2px; font-size:0.78rem; color:var(--acc)">'+recRpeText+'</div>' : '')+
        '<div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Link do vídeo</label><input class="t" type="text" data-ex="'+exerIdx+'" data-f="v" value="'+esc(x.v||'')+'" placeholder="https://..."></div>'+
-       '<div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Tempo de Descanso (segundos)</label><input class="t" type="number" data-ex="'+exerIdx+'" data-f="descanso" value="'+esc(x.descanso||90)+'" placeholder="90" style="max-width:120px"></div>'+
-       '<div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Tags Rápidas de Orientação</label><div class="chips" style="margin-top:4px">'+
-       '<button class="chip" style="font-size:0.7rem; padding:4px 10px" data-c="tagNota" data-ex="'+exerIdx+'" data-nota="Controlar excêntrica 3s">Controlar excêntrica</button>'+
-       '<button class="chip" style="font-size:0.7rem; padding:4px 10px" data-c="tagNota" data-ex="'+exerIdx+'" data-nota="Lombar apoiada no banco">Lombar apoiada</button>'+
-       '<button class="chip" style="font-size:0.7rem; padding:4px 10px" data-c="tagNota" data-ex="'+exerIdx+'" data-nota="Foco na contração máxima">Contração máxima</button>'+
-       '</div></div>'+
-       '<p class="mu" style="margin:10px 0 4px; font-weight:700">Prescrição por Série (Carga, Reps e RPE):</p>'+
+       '<div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Descanso (segundos)</label><input class="t" type="number" data-ex="'+exerIdx+'" data-f="descanso" value="'+esc(x.descanso||90)+'" style="max-width:120px"></div>'+
+       '<p class="mu" style="margin:10px 0 4px; font-weight:700">Prescrição por Série:</p>'+
        (x.s && x.s.length ? x.s.map((s,si)=>
          '<div style="display:flex; gap:6px; align-items:center; margin-bottom:6px">'+
          '<span class="mu" style="font-size:0.75rem; width:45px">Série '+(si+1)+'</span>'+
@@ -1512,15 +1465,15 @@ function viewC(){
       const isRun = r.tipo === 'corrida';
       return '<div class="card"><h3>'+(isRun?'🏃 ':'🏋️ ')+esc(r.n)+'</h3><div class="mu">'+
       (isRun 
-        ? r.ex.map(x=>esc(x.e)+' ('+esc(x.dist)+' · '+esc(x.zona)+' · '+esc(x.paceAlvo||'livre')+')').join(' · ')
+        ? r.ex.map(x=>esc(x.e)+' ('+esc(x.dist)+' · '+esc(x.zona)+')').join(' · ')
         : r.ex.map(x=>esc(x.e)+' ('+x.s.length+' séries)').join(' · ')
       )+'</div><div style="margin-top:10px"><button class="btn s g" data-c="editR" data-id="'+r.id+'">Editar</button><button class="x" data-c="delR" data-id="'+r.id+'">Excluir</button></div></div>';
     }).join('')+
     '<div style="display:flex; gap:8px"><button class="btn t" style="flex:1" data-c="newR">+ Musculação</button><button class="btn g" style="flex:1; border-color:var(--acc); color:var(--acc)" data-c="newRRun">+ Corrida</button></div>'+
-    '<div style="margin-top:10px"><button class="btn g" style="width:100%" data-c="copiarRotinaOutroAluno">📋 Copiar Rotina de Outro Aluno</button></div>';
+    '<div style="margin-top:10px"><button class="btn g" style="width:100%" data-c="salvarComoTemplate">💾 Salvar estas rotinas como Template</button></div>';
   }
 
-  h+='<h2>Melhor 1RM estimado (Musculação)</h2><div class="card">'+(Object.keys(best).length?Object.keys(best).sort().map(k=>'<div style="display:flex;justify-content:space-between;padding:4px 0"><span>'+esc(k)+'</span><b style="color:var(--pri)">'+fmt(best[k])+' kg</b></div>').join(''):'<span class="mu">Sem registros ainda.</span>')+'<h2>O que o aluno registrou</h2>'+histHTML(hist(u),{coach:1,cm:cms(u)});
+  h+='<h2>O que o aluno registrou</h2>'+histHTML(hist(u),{coach:1,cm:cms(u)});
  }
  $('vt').innerHTML=h;
 }
@@ -1561,29 +1514,40 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   D.rotinas[u] = {rt: r};
   await save();
  };
+
  if(c==='gerarPDF'){
   gerarRelatorioPDF(b.dataset.id);
  }
- else if(c==='copiarRotinaOutroAluno'){
-  const alunosOutros = Object.keys(D.perfis||{}).filter(x=>x!==u);
-  if(!alunosOutros.length){ alert('Não há outros alunos cadastrados para copiar rotinas.'); return; }
-  const origem = prompt('Digite exatamente o ID do aluno de origem (ex: aluno_nome):');
-  if(origem && D.rotinas[origem] && D.rotinas[origem].rt){
-    const rotinasOrigem = D.rotinas[origem].rt;
-    if(rotinasOrigem.length){
-      const novasCopiadas = rotinasOrigem.map(r=>({...r, id: Date.now() + Math.random()}));
-      await saveR([...rts(u), ...novasCopiadas]);
-      alert('Rotinas copiadas com sucesso!');
-      view();
-    } else {
-      alert('O aluno selecionado não tem rotinas cadastradas.');
-    }
-  } else if(origem){
-    alert('Aluno não encontrado ou sem rotinas.');
+ else if(c==='aplicarTemplateGlobal'){
+  const tid = b.dataset.tid;
+  const tpl = D.templates[tid];
+  const alunosIds = Object.keys(D.perfis||{});
+  if(!alunosIds.length){ alert('Nenhum aluno cadastrado.'); return; }
+  const alunoEscolhido = prompt('Digite o nome ou ID do aluno que receberá este template:\n\n' + alunosIds.join('\n'));
+  if(alunoEscolhido && D.perfis[alunoEscolhido]){
+    const novaRotina = { id: Date.now(), tipo: 'musculacao', n: tpl.n, ex: JSON.parse(JSON.stringify(tpl.ex)) };
+    if(!D.rotinas) D.rotinas = {};
+    if(!D.rotinas[alunoEscolhido]) D.rotinas[alunoEscolhido] = { rt: [] };
+    D.rotinas[alunoEscolhido].rt.push(novaRotina);
+    await save();
+    alert('Template aplicado com sucesso para ' + D.perfis[alunoEscolhido].n + '!');
+    view();
+  } else if(alunoEscolhido) {
+    alert('Aluno não encontrado.');
   }
  }
- else if(c==='tagNota'){
-   alert('Tag selecionada: ' + b.dataset.nota);
+ else if(c==='salvarComoTemplate'){
+  const rotinasAluno = rts(u);
+  if(!rotinasAluno.length){ alert('Este aluno não tem rotinas para salvar como template.'); return; }
+  const nomeT = prompt('Nome para o novo Modelo/Template:', 'Treino Padrão');
+  if(nomeT && nomeT.trim()){
+   const tid = Date.now();
+   if(!D.templates) D.templates = {};
+   D.templates[tid] = { n: nomeT.trim(), ex: JSON.parse(JSON.stringify(rotinasAluno[0].ex)) };
+   await save();
+   alert('Template salvo com sucesso!');
+   view();
+  }
  }
  else if(c==='novoTemplate'){
   const nomeT = prompt('Nome do modelo de treino (ex: Hipertrofia A):');
@@ -1618,10 +1582,11 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
  else if(c==='novoAluno'){
   const nome = prompt('Digite o nome do novo aluno:');
   if(nome && nome.trim()){
+   const valorMensal = prompt('Qual o valor da mensalidade deste aluno (R$)?', '150');
    const slug = slugify(nome);
    const novoId = 'aluno_' + slug;
    if(!D.perfis) D.perfis = {};
-   D.perfis[novoId] = {n: nome.trim()};
+   D.perfis[novoId] = {n: nome.trim(), valor: parseFloat(valorMensal) || 150};
    await save();
    view();
   }
@@ -1645,17 +1610,6 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
    view();
   }
  }
- else if(c==='calcCooper'){
-  const val = parseFloat($('inpCooper').value);
-  if(!val || val < 500){
-    alert('Digite uma distância válida em metros (ex: 2400).');
-    return;
-  }
-  if(!D.corrida) D.corrida = {};
-  D.corrida[u] = { cooper: val, data: Date.now() };
-  await save();
-  view();
- }
  else if(c==='open'){open=id;ed=null}
  else if(c==='back'){open=null;ed=null}
  else if(c==='setTipoEd'){
@@ -1666,7 +1620,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   }
  }
  else if(c==='newR') ed={rid:null, tipo:'musculacao', n:'', ex:[{e:'', v:'', descanso:90, s:[{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''}]}]};
- else if(c==='newRRun') ed={rid:null, tipo:'corrida', n:'', ex:[{e:'Aquecimento', dist:'10 min', zona:'Z1'}, {e:'Treino Principal', dist:'5 km', zona:'Z2'}]};
+ else if(c==='newRRun') ed={rid:null, tipo:'corrida', n:'', ex:[{e:'Aquecimento', dist:'10 min', zona:'Z1'}]};
  else if(c==='editR'){
   const r=rts(u).find(x=>String(x.id)===id);
   ed={rid:r.id, tipo:r.tipo||'musculacao', n:r.n, ex:r.ex.map(x=>({
@@ -1686,16 +1640,11 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
  else if(c==='saveR'){
   if(!ed.n.trim()) return;
   if(ed.tipo === 'corrida'){
-    const runData = calcRunningZones(D.corrida && D.corrida[u] ? D.corrida[u].cooper : null);
-    const ex = ed.ex.filter(x=>x.e.trim()).map(x=>{
-      const zObj = runData ? runData.zones.find(item=>item.z===x.zona) : null;
-      return {
-        e: x.e.trim(),
-        dist: String(x.dist||'Livre').trim(),
-        zona: x.zona || 'Z2',
-        paceAlvo: zObj ? zObj.paceRange : 'Calcular Cooper'
-      };
-    });
+    const ex = ed.ex.filter(x=>x.e.trim()).map(x=>({
+      e: x.e.trim(),
+      dist: String(x.dist||'Livre').trim(),
+      zona: x.zona || 'Z2'
+    }));
     if(!ex.length) return;
     const r = {id:ed.rid||Date.now(), tipo:'corrida', n:ed.n.trim(), ex};
     await saveR(ed.rid?rts(u).map(x=>x.id===ed.rid?r:x):[...rts(u),r]);
