@@ -289,6 +289,15 @@ td input{
 td input:focus{border-color:var(--pri);background:var(--elev);outline:none}
 td input::placeholder{color:var(--mu2);font-weight:600}
 
+/* Estilo para campos bloqueados para o aluno (Reps e RPE prescritos) */
+td input.readonly-presc {
+  background: var(--bg2);
+  color: var(--mu);
+  border: 1px dashed var(--ln2);
+  font-weight: 600;
+  cursor: not-allowed;
+}
+
 .ty{
   width:32px;
   height:32px;
@@ -406,48 +415,6 @@ input.t:focus,select:focus,textarea.t:focus{border-color:var(--pri);outline:none
 svg{width:100%;height:auto}[hidden]{display:none!important}
 #msg{display:none}
 
-.q{margin-bottom:20px}.q h4{margin:0 0 10px;font-size:.92rem;font-weight:700}
-.opts{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.opt{
-  border:1.5px solid var(--ln);
-  border-radius:14px;
-  background:var(--pill);
-  color:var(--tx);
-  padding:10px 2px;
-  cursor:pointer;
-  font-family:inherit;
-  font-size:.72rem;
-  font-weight:600;
-  line-height:1.2;
-  transition:all .12s;
-}
-.opt b{display:block;font-size:1.45rem;margin-bottom:3px}
-.opt.on{
-  border-color:var(--pri);
-  background:var(--pri-t);
-  box-shadow:0 0 0 1px var(--pri) inset;
-}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{
-  border:1.5px solid var(--ln);
-  border-radius:9999px;
-  background:var(--pill);
-  color:var(--tx);
-  padding:8px 16px;
-  cursor:pointer;
-  font-family:inherit;
-  font-weight:600;
-  font-size:.85rem;
-}
-.chip.on{
-  border-color:var(--pri);
-  background:var(--pri-t);
-  color:var(--pri);
-}
-.pse{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
-.pse .opt{padding:12px 2px;border-bottom-width:4px!important}
-.pse .opt b{margin:0;font-size:1.1rem}
-
 .bd{
   display:inline-block;
   font-size:.76rem;
@@ -462,35 +429,6 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
 .bd.warn{background:var(--wn-bg);color:var(--wn-tx);border-color:transparent}
 .bd.ok{background:var(--ok-t);color:var(--ok);border-color:transparent}
 .bd.run{background:var(--acc-t);color:var(--acc);border-color:transparent}
-input[type=range]{width:100%;accent-color:var(--pri)}
-
-.z-table td, .z-table th { padding: 6px 4px; border-bottom: 1px solid var(--ln); font-size: 0.8rem; }
-.z-badge { padding: 3px 7px; border-radius: 6px; font-weight: 800; font-size: 0.72rem; display: inline-block; }
-.z1 { background: rgba(158,158,164,0.2); color: #D1D1D6; }
-.z2 { background: rgba(59,130,246,0.2); color: #60A5FA; }
-.z3 { background: rgba(48,209,88,0.2); color: #4ADE80; }
-.z4 { background: rgba(255,208,0,0.2); color: #FFD000; }
-.z5 { background: rgba(255,69,58,0.2); color: #FF6961; }
-
-#prBanner {
-  position: fixed;
-  top: 70px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, #FFD000, #FF9500);
-  color: #0D0D0F;
-  padding: 10px 20px;
-  border-radius: 99px;
-  font-weight: 800;
-  font-size: 0.9rem;
-  box-shadow: 0 10px 25px rgba(255,208,0,0.4);
-  z-index: 9999;
-  animation: bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-@keyframes bounceIn {
-  0% { transform: translateX(-50%) scale(0); opacity: 0; }
-  100% { transform: translateX(-50%) scale(1); opacity: 1; }
-}
 
 /* Modal de Busca de Exercícios por Grupo Muscular */
 #modalBuscaEx {
@@ -1088,14 +1026,14 @@ function renderW(){
           ${x.v ? '<a class="vd" href="'+esc(x.v)+'" target="_blank" rel="noopener">▶ Vídeo</a>' : ''}
         </div>
         <table>
-          <tr><th>Série</th><th>Kg</th><th>Reps</th><th>RPE</th><th>Ação</th></tr>`;
+          <tr><th>Série</th><th>Kg</th><th>Reps (Alvo)</th><th>RPE (Alvo)</th><th>Ação</th></tr>`;
       
       x.s.forEach((s, si)=>{
         h += `<tr class="${s.done?'d':''}">
           <td><button class="ty ${s.t==='A'?'tA':s.t==='F'?'tF':s.t==='D'?'tD':''}" onclick="toggleSérieTipo(${xi}, ${si})">${s.t||(si+1)}</button></td>
           <td><input type="number" step="0.5" value="${s.kg!==undefined?s.kg:''}" oninput="W.ex[${xi}].s[${si}].kg=parseFloat(this.value)||0"></td>
-          <td><input type="text" value="${s.r!==undefined?s.r:''}" oninput="W.ex[${xi}].s[${si}].r=this.value"></td>
-          <td><input type="text" value="${s.rpe!==undefined?s.rpe:''}" placeholder="-" style="max-width:50px" oninput="W.ex[${xi}].s[${si}].rpe=this.value"></td>
+          <td><input type="text" class="readonly-presc" value="${esc(s.r!==undefined?s.r:'')}" readonly tabindex="-1" title="Prescrito pelo treinador"></td>
+          <td><input type="text" class="readonly-presc" value="${esc(s.rpe!==undefined?s.rpe:'')}" readonly tabindex="-1" title="Prescrito pelo treinador" style="max-width:50px"></td>
           <td><button class="ck" onclick="toggleSérieDone(${xi}, ${si}, ${x.descanso||90})">✓</button></td>
         </tr>`;
       });
