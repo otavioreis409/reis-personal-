@@ -693,9 +693,9 @@ function histHTML(h,o){return h.length?h.map(w=>{
   return '<div class="card"><h3>'+(isRun?'🏃 ':'🏋️ ')+esc(w.n)+'</h3><div class="mu">'+dt(w.d)+' · '+mmss(w.dur)+(isRun?'':' · volume '+fmt(vol)+' kg')+'</div>'+ckHTML(w)+'<div style="margin-top:10px;font-size:.88rem;display:grid;gap:4px">'+
   (isRun 
     ? w.ex.map(x=>'<div><b>'+esc(x.e)+'</b> <span class="mu">('+esc(x.zona||'Livre')+' · Alvo: '+esc(x.alvo||'-')+') — Realizado: <b>'+esc(x.realizado||'Concluído')+'</b></span></div>').join('')
-    : w.ex.map(x=>'<div><b>'+esc(x.e)+'</b> <span class="mu">'+x.s.map(s=>(s.t&&s.t!=='N'?'<b style="color:var(--pri)">'+s.t+'</b> ':'')+fmt(s.kg)+'×'+s.r+(s.rpe?' (RPE '+s.rpe+')':'')).join(' · ')+'</span>'+(x.nota?'<div class="mu" style="color:var(--acc);margin-top:2px">💬 Nota: '+esc(x.nota)+'</div>':'')+'</div>').join('')
+    : w.ex.map(x=>'<div><b>'+esc(x.e)+'</b> <span class="mu">'+x.s.map(s=>(s.t&&s.t!=='N'?'<b style="color:var(--pri)">'+s.t+'</b> ':'')+fmt(s.kg)+'×'+s.r+(s.rpe?' (RPE '+s.rpe+')':'')).join(' · ')+'</span>'+(x.nota?'<div class="mu" style="color:var(--acc);margin-top:2px">💬 Nota: '+esc(x.nota)+'</div>':'')+(x.videoAluno?'<div style="margin-top:2px"><a class="vd" href="'+esc(x.videoAluno)+'" target="_blank" rel="noopener">▶ Ver vídeo do aluno</a></div>':'')+'</div>').join('')
   )+'</div>'+
- (o.coach?'<textarea class="t" id="c'+w.id+'" rows="2" style="margin-top:10px" placeholder="Comentário para o aluno…">'+esc(cm||'')+'</textarea><button class="btn s g" style="margin-top:8px" data-c="cm" data-w="'+w.id+'">Salvar comentário</button>':(cm?'<div class="cm">💬 Treinador: '+esc(cm+'</div>':'')))+
+ (o.coach?'<textarea class="t" id="c'+w.id+'" rows="2" style="margin-top:10px" placeholder="Comentário para o aluno…">'+esc(cm||'')+'</textarea><button class="btn s g" style="margin-top:8px" data-c="cm" data-w="'+w.id+'">Salvar comentário</button>':(cm?'<div class="cm">💬 Treinador: '+esc(cm)+'</div>':''))+
  (o.del?'<button class="x" style="margin-top:6px" data-h="'+w.id+'">Apagar</button>':'')+'</div>'}).join(''):'<p class="mu">Nenhum treino finalizado ainda.</p>'}
 
 function ckHTML(w){if(!w.ck&&w.pse==null)return '';const c=w.ck,o=[];
@@ -780,6 +780,7 @@ function start(rotina){
        v: x.v||'',
        descanso: x.descanso || 90,
        nota: '',
+       videoAluno: '',
        s: x.s ? x.s.map(s=>({metaKg: s.kg, metaReps: s.r, metaRpe: s.rpe, kg:'', r:'', rpe:'', d:false, t:'N'})) : Array.from({length:3},()=>({kg:'',r:'',rpe:'',d:false,t:'N'}))
      }))
    };
@@ -803,9 +804,11 @@ function drawW(){
  W.ex.map((x,xi)=>{
    const p0 = prev(x.e, 0);
    const prevText = p0 ? 'Semana passada: ' + fmt(p0.kg) + 'kg × ' + p0.r + 'r' : 'Sem histórico anterior';
-   return '<div class="card ex"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div><h3>'+esc(x.e)+'</h3>'+(x.v?'<a class="vd" href="'+esc(x.v)+'" target="_blank" rel="noopener">▶ Ver vídeo de execução</a>':'')+'<div class="mu" style="color:var(--acc);margin-top:2px;font-size:0.78rem">📌 '+prevText+' · Descanso: <b>'+(x.descanso||90)+'s</b></div></div></div><table><tr><th>Série</th><th>Meta</th><th>Kg</th><th>Reps</th><th>RPE</th><th></th></tr>'+
+   return '<div class="card ex"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div><h3>'+esc(x.e)+'</h3>'+(x.v?'<a class="vd" href="'+esc(x.v)+'" target="_blank" rel="noopener">▶ Ver vídeo de demonstração</a>':'')+'<div class="mu" style="color:var(--acc);margin-top:2px;font-size:0.78rem">📌 '+prevText+' · Descanso: <b>'+(x.descanso||90)+'s</b></div></div></div><table><tr><th>Série</th><th>Meta</th><th>Kg</th><th>Reps</th><th>RPE</th><th></th></tr>'+
    x.s.map((s,i)=>{const p=prev(x.e,i),n=i+1;return '<tr class="'+(s.d?'d':'')+'"><td><button class="ty t'+s.t+'" data-a="ty" data-x="'+xi+'" data-i="'+i+'">'+(s.t==='N'?n:s.t)+'</button></td><td class="mu" style="font-size:0.75rem">'+(s.metaKg||s.metaReps?(fmt(s.metaKg||0)+'kg × '+s.metaReps+'r'+(s.metaRpe?' RPE '+s.metaRpe:'')):'–')+'</td><td><input inputmode="decimal" data-k="kg" data-x="'+xi+'" data-i="'+i+'" value="'+esc(s.kg)+'" placeholder="'+(s.metaKg!==undefined && s.metaKg!==''?fmt(s.metaKg):(p?fmt(p.kg):''))+'"></td><td><input inputmode="numeric" data-k="r" data-x="'+xi+'" data-i="'+i+'" value="'+esc(s.r)+'" placeholder="'+(s.metaReps!==undefined && s.metaReps!==''?s.metaReps:(p?p.r:''))+'"></td><td><input inputmode="decimal" data-k="rpe" data-x="'+xi+'" data-i="'+i+'" value="'+esc(s.rpe||'')+'" placeholder="'+(s.metaRpe?s.metaRpe:'-')+'" style="max-width:52px"></td><td><button class="ck" data-a="ck" data-x="'+xi+'" data-i="'+i+'" data-desc="'+(x.descanso||90)+'">✓</button></td></tr>'}).join('')+
-   '</table><button class="btn g" style="margin-top:8px;padding:10px;min-height:40px;font-size:.85rem" data-a="ad" data-x="'+xi+'">+ Série</button><input class="t" style="margin-top:10px;min-height:38px;font-size:0.85rem" data-note="'+xi+'" value="'+esc(x.nota||'')+'" placeholder="Deixar nota rápida para o treinador sobre este exercício..."></div>';
+   '</table><button class="btn g" style="margin-top:8px;padding:10px;min-height:40px;font-size:.85rem" data-a="ad" data-x="'+xi+'">+ Série</button>'+
+   '<input class="t" style="margin-top:10px;min-height:38px;font-size:0.85rem" data-note="'+xi+'" value="'+esc(x.nota||'')+'" placeholder="Deixar nota para o treinador...">'+
+   '<input class="t" style="margin-top:6px;min-height:38px;font-size:0.85rem;border-color:var(--acc)" data-video="'+xi+'" value="'+esc(x.videoAluno||'')+'" placeholder="🔗 Cole aqui o link do vídeo da sua execução..."></div>';
  }).join('')+
  '</div>';
 }
@@ -815,6 +818,7 @@ $('w').addEventListener('input',e=>{
   if(t.dataset.k) W.ex[t.dataset.x].s[t.dataset.i][t.dataset.k]=t.value;
   else if(t.dataset.rk) W.ex[t.dataset.x][t.dataset.rk]=t.value;
   else if(t.dataset.note!==undefined) W.ex[t.dataset.note].nota=t.value;
+  else if(t.dataset.video!==undefined) W.ex[t.dataset.video].videoAluno=t.value;
   else if(t.dataset.q==='int'){W.ck.int=+t.value;$('iv').textContent=t.value}
   else if(t.dataset.q==='obs') W.ck.obs=t.value;
 });
@@ -859,7 +863,7 @@ $('w').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||
        D.treinos[me]={h}; save();
      }
    } else {
-     const ex=W.ex.map(y=>({e:y.e, nota:y.nota||'', s:y.s.filter(s=>s.d).map(s=>({kg:parseFloat(String(s.kg).replace(',','.'))||0,r:parseInt(s.r)||0,rpe:s.rpe||'',t:s.t}))})).filter(y=>y.s.length);
+     const ex=W.ex.map(y=>({e:y.e, nota:y.nota||'', videoAluno:y.videoAluno||'', s:y.s.filter(s=>s.d).map(s=>({kg:parseFloat(String(s.kg||0).replace(',','.'))||0,r:parseInt(s.r||0),rpe:s.rpe||'',t:s.t}))})).filter(y=>y.s.length);
      if(ex.length){
        const h=[{id:Date.now(), tipo:'musculacao', d:new Date().toISOString().slice(0,10),n:W.n,dur:Math.floor((Date.now()-W.t0)/1000),ex,pse:W.pse,ck:W.ck},...hist(me)];
        if(!D.treinos) D.treinos = {};
@@ -888,7 +892,7 @@ function viewC(){
   <div class="card" style="border-left: 3px solid var(--pri); margin-bottom: 20px;">
    <h3 style="color:var(--pri)">💡 Modelos de Treino & Templates</h3>
    <p class="mu" style="margin-top:6px; font-size:0.86rem; line-height:1.5">
-    Guarde treinos predefinidos para aplicar com um clique a qualquer aluno.
+    Guarde treinos predefinidos ou copie rotinas entre alunos com um clique.
    </p>
   </div>
   <h2>📁 Modelos Salvos (Templates)</h2>
@@ -947,10 +951,9 @@ function viewC(){
    const nomeParam = slugify(alunoNomeOriginal);
    const linkAluno = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + '?aluno=' + nomeParam;
    
-   // Gráfico / Indicador de Aderência Mensal
    const anamU = D.anamnese && D.anamnese[u];
    const metaDiasSemana = anamU && parseInt(anamU.dias) ? parseInt(anamU.dias) : 3;
-   const metaMes = metaDiasSemana * 4; // média 4 semanas
+   const metaMes = metaDiasSemana * 4;
    const mesAtual = new Date().toISOString().slice(0,7);
    const treinosMes = hist(u).filter(item => item.d && item.d.startsWith(mesAtual)).length;
    const aderenciaPct = Math.min(100, Math.round((treinosMes / metaMes) * 100));
@@ -1069,9 +1072,27 @@ function viewC(){
    } else {
      h += ed.ex.map((x,i)=>{
        const exerIdx = i;
+       
+       // Histórico anterior do aluno neste exercício específico para auxiliar o treinador
+       let lastPerfText = '';
+       const alunoHist = hist(u).filter(item=>item.tipo!=='corrida');
+       for(const th of alunoHist){
+         const foundEx = th.ex.find(item=>item.e.toLowerCase() === (x.e||'').toLowerCase());
+         if(foundEx && foundEx.s && foundEx.s.length){
+           lastPerfText = '💡 Último registro ('+dt(th.d)+'): ' + foundEx.s.map(s=>fmt(s.kg)+'kg×'+s.r).join(' | ');
+           break;
+         }
+       }
+
        return '<div class="edr"><input class="t" list="exl" data-ex="'+exerIdx+'" data-f="e" value="'+esc(x.e)+'" placeholder="Nome do exercício" data-auto-ex="'+exerIdx+'">'+
+       (lastPerfText ? '<div class="mu" style="margin-top:4px; font-size:0.78rem; color:var(--pri)">'+lastPerfText+'</div>' : '')+
        '<div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Link do vídeo</label><input class="t" type="text" data-ex="'+exerIdx+'" data-f="v" value="'+esc(x.v||'')+'" placeholder="https://..."></div>'+
        '<div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Tempo de Descanso (segundos)</label><input class="t" type="number" data-ex="'+exerIdx+'" data-f="descanso" value="'+esc(x.descanso||90)+'" placeholder="90" style="max-width:120px"></div>'+
+       '<div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Tags Rápidas de Orientação</label><div class="chips" style="margin-top:4px">'+
+       '<button class="chip" style="font-size:0.7rem; padding:4px 10px" data-c="tagNota" data-ex="'+exerIdx+'" data-nota="Controlar excêntrica 3s">Controlar excêntrica</button>'+
+       '<button class="chip" style="font-size:0.7rem; padding:4px 10px" data-c="tagNota" data-ex="'+exerIdx+'" data-nota="Lombar apoiada no banco">Lombar apoiada</button>'+
+       '<button class="chip" style="font-size:0.7rem; padding:4px 10px" data-c="tagNota" data-ex="'+exerIdx+'" data-nota="Foco na contração máxima">Contração máxima</button>'+
+       '</div></div>'+
        '<p class="mu" style="margin:10px 0 4px; font-weight:700">Prescrição por Série (Carga, Reps e RPE):</p>'+
        (x.s && x.s.length ? x.s.map((s,si)=>
          '<div style="display:flex; gap:6px; align-items:center; margin-bottom:6px">'+
@@ -1098,7 +1119,8 @@ function viewC(){
         : r.ex.map(x=>esc(x.e)+' ('+x.s.length+' séries)').join(' · ')
       )+'</div><div style="margin-top:10px"><button class="btn s g" data-c="editR" data-id="'+r.id+'">Editar</button><button class="x" data-c="delR" data-id="'+r.id+'">Excluir</button></div></div>';
     }).join('')+
-    '<div style="display:flex; gap:8px"><button class="btn t" style="flex:1" data-c="newR">+ Musculação</button><button class="btn g" style="flex:1; border-color:var(--acc); color:var(--acc)" data-c="newRRun">+ Corrida</button></div>';
+    '<div style="display:flex; gap:8px"><button class="btn t" style="flex:1" data-c="newR">+ Musculação</button><button class="btn g" style="flex:1; border-color:var(--acc); color:var(--acc)" data-c="newRRun">+ Corrida</button></div>'+
+    '<div style="margin-top:10px"><button class="btn g" style="width:100%" data-c="copiarRotinaOutroAluno">📋 Copiar Rotina de Outro Aluno</button></div>';
   }
 
   h+='<h2>Melhor 1RM estimado (Musculação)</h2><div class="card">'+(Object.keys(best).length?Object.keys(best).sort().map(k=>'<div style="display:flex;justify-content:space-between;padding:4px 0"><span>'+esc(k)+'</span><b style="color:var(--pri)">'+fmt(best[k])+' kg</b></div>').join(''):'<span class="mu">Sem registros ainda.</span>')+'<h2>O que o aluno registrou</h2>'+histHTML(hist(u),{coach:1,cm:cms(u)});
@@ -1147,7 +1169,32 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   D.rotinas[u] = {rt: r};
   await save();
  };
- if(c==='novoTemplate'){
+ if(c==='copiarRotinaOutroAluno'){
+  const alunosOutros = Object.keys(D.perfis||{}).filter(x=>x!==u);
+  if(!alunosOutros.length){ alert('Não há outros alunos cadastrados para copiar rotinas.'); return; }
+  let msg = 'Escolha o ID do aluno de origem:\n' + alunosOutros.map(a=>'- '+a+' ('+D.perfis[a].n+')').join('\n');
+  const origem = prompt('Digite exatamente o ID do aluno (ex: aluno_nome):');
+  if(origem && D.rotinas[origem] && D.rotinas[origem].rt){
+    const rotinasOrigem = D.rotinas[origem].rt;
+    if(rotinasOrigem.length){
+      const novasCopiadas = rotinasOrigem.map(r=>({...r, id: Date.now() + Math.random()}));
+      await saveR([...rts(u), ...novasCopiadas]);
+      alert('Rotinas copiadas com sucesso!');
+      view();
+    } else {
+      alert('O aluno selecionado não tem rotinas cadastradas.');
+    }
+  } else if(origem){
+    alert('Aluno não encontrado ou sem rotinas.');
+  }
+ }
+ else if(c==='tagNota'){
+   const exIdx = b.dataset.ex;
+   const notaTag = b.dataset.nota;
+   // Adiciona ao nome ou mantém numa propriedade auxiliar se desejado, aqui pomos no nome do exercício ou criamos alerta
+   alert('Tag selecionada: ' + notaTag);
+ }
+ else if(c==='novoTemplate'){
   const nomeT = prompt('Nome do modelo de treino (ex: Hipertrofia A):');
   if(nomeT && nomeT.trim()){
    const tid = Date.now();
