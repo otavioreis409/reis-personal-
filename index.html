@@ -451,34 +451,8 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   transform: translateX(-50%) translateY(0);
 }
 
-/* Modal explicativo do RPE */
-#modalRpeInfo {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.85);
-  backdrop-filter: blur(8px);
-  z-index: 100;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 16px;
-}
-
-/* Modal de Check-in Pré-treino e Pós-treino */
-#modalCheckin {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.85);
-  backdrop-filter: blur(8px);
-  z-index: 100;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 16px;
-}
-
-/* Modal de Busca de Exercícios por Grupo Muscular */
-#modalBuscaEx {
+/* Modais */
+#modalRpeInfo, #modalCheckin, #modalAplicarTemplate, #modalBuscaEx {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.85);
@@ -687,6 +661,7 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
 <div id="w" hidden></div>
 <div id="modalRpeInfo" hidden></div>
 <div id="modalCheckin" hidden></div>
+<div id="modalAplicarTemplate" hidden></div>
 <div id="modalBuscaEx" hidden></div>
 <datalist id="exl"></datalist>
 <script>
@@ -1652,6 +1627,54 @@ function exportarDadosCSV(){
   document.body.removeChild(link);
 }
 
+function abrirModalAplicarTemplate(tid){
+  const tpl = D.templates[tid];
+  const ids = Object.keys(D.perfis || {});
+  if(!ids.length){ alert('Nenhum aluno cadastrado.'); return; }
+
+  const modal = $('modalAplicarTemplate');
+  modal.innerHTML = `
+    <div class="modal-box">
+      <h3 style="color:var(--pri); margin-bottom:6px">📥 Aplicar Template: ${esc(tpl.n)}</h3>
+      <p class="mu" style="margin-bottom:12px">Selecione abaixo quais alunos devem receber esta rotina de treino:</p>
+      
+      <div style="display:grid; gap:8px; max-height: 250px; overflow-y: auto; margin-bottom: 16px; background:var(--pill); padding:10px; border-radius:12px">
+        ${ids.map(u => `
+          <label style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:6px; font-weight:600">
+            <input type="checkbox" class="chk-aluno-tpl" value="${u}" style="width:18px; height:18px; accent-color:var(--pri)">
+            ${esc(D.perfis[u].n)}
+          </label>
+        `).join('')}
+      </div>
+
+      <div style="display:flex; gap:8px">
+        <button class="btn t" onclick="confirmarAplicarTemplate('${tid}')">Aplicar aos Selecionados</button>
+        <button class="btn g" onclick="document.getElementById('modalAplicarTemplate').hidden=true">Cancelar</button>
+      </div>
+    </div>
+  `;
+  modal.hidden = false;
+}
+
+async function confirmarAplicarTemplate(tid){
+  const tpl = D.templates[tid];
+  const checkboxes = document.querySelectorAll('.chk-aluno-tpl:checked');
+  if(!checkboxes.length){ alert('Selecione pelo menos um aluno.'); return; }
+
+  for(let chk of checkboxes){
+    const alunoId = chk.value;
+    const novaRotina = { id: Date.now() + Math.random(), tipo: 'musculacao', n: tpl.n, diaSemana: 'Segunda-feira', ex: JSON.parse(JSON.stringify(tpl.ex)) };
+    if(!D.rotinas) D.rotinas = {};
+    if(!D.rotinas[alunoId]) D.rotinas[alunoId] = { rt: [] };
+    D.rotinas[alunoId].rt.push(novaRotina);
+    await savePartial('rotinas', alunoId, D.rotinas[alunoId]);
+  }
+
+  $('modalAplicarTemplate').hidden = true;
+  alert('Template aplicado com sucesso para os alunos selecionados!');
+  view();
+}
+
 function viewC(){
  const ids = Object.keys(D.perfis||{});
  const mesAtual = new Date().toISOString().slice(0,7);
@@ -1815,7 +1838,7 @@ function viewC(){
            <div><h3>${esc(t.n)}</h3><div class="mu">${t.ex.length} exercício(s) cadastrados</div></div>
            <div style="display:flex; gap:6px">
              <button class="btn s g" style="margin:0" data-c="editarTemplate" data-tid="${tid}">Editar</button>
-             <button class="btn s t" style="margin:0" data-c="aplicarTemplateGlobal" data-tid="${tid}">Aplicar</button>
+             <button class="btn s t" style="margin:0" onclick="abrirModalAplicarTemplate('${tid}')">Aplicar</button>
              <button class="x" data-c="delTemplate" data-tid="${tid}" style="color:var(--danger)">Excluir</button>
            </div>
          </div>`;
@@ -1863,59 +1886,134 @@ function viewC(){
      return matchBusca;
    });
 
-   if(idsFiltrados.length){
-    h+=idsFiltrados.map((u, index)=>{
-     const checked = (D.checks||{})[u] ? 'checked' : '';
-     const alunoNomeOriginal = D.perfis[u].n;
-     const valorMensal = D.perfis[u].valor || 0;
-     const nomeParam = slugify(alunoNomeOriginal);
-     const linkAluno = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + '?aluno=' + nomeParam;
-     
-     const anamU = D.anamnese && D.anamnese[u];
-     const metaDiasSemana = anamU && parseInt(anamU.dias) ? parseInt(anamU.dias) : 3;
-     const metaMes = metaDiasSemana * 4;
-     const hListAluno = hist(u);
-     const treinosMes = hListAluno.filter(item => item.d && item.d.startsWith(mesAtual)).length;
-     const aderenciaPct = Math.min(100, Math.round((treinosMes / metaMes) * 100));
+   // Separar em duas listas: Marcados (Feitos / Checkbox ativados) vs Não Marcados (Pendentes)
+   const listaFeitos = [];
+   const listaNaoFeitos = [];
 
-     const pago = D.financeiro && D.financeiro[u] && D.financeiro[u][mesAtual];
-     const ultimoTreino = hListAluno.length ? hListAluno[0] : null;
-     const concluiuHoje = ultimoTreino && ultimoTreino.d === hojeStr;
-     const avisoTreinoBadge = concluiuHoje ? `<span class="bd ok" style="background:var(--pri-t); color:var(--pri); border-color:var(--pri)">🔔 Concluiu treino hoje! (${dt(ultimoTreino.d)} · ${esc(ultimoTreino.n)})</span>` : (ultimoTreino ? `<span class="bd" style="color:var(--mu)">Último treino: ${dt(ultimoTreino.d)}</span>` : `<span class="bd warn">Nenhum treino ainda</span>`);
+   idsFiltrados.forEach((u, index) => {
+     const isChecked = (D.checks || {})[u] ? true : false;
+     const itemObj = { u, index };
+     if(isChecked) listaFeitos.push(itemObj);
+     else listaNaoFeitos.push(itemObj);
+   });
 
-     return '<div class="card" style="border-left: 3px solid '+(concluiuHoje?'var(--pri)':'var(--ln2)')+'">'+
-       '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px">'+
-         '<div style="display:flex; gap:10px; align-items:flex-start">'+
-           '<input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" '+checked+' style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer; margin-top:2px">'+
-           '<div>'+
-             '<div style="display:flex; align-items:center; gap:8px">'+
-               '<span class="mu" style="font-weight:700">#'+(index+1)+'</span>'+
-               '<h3 style="font-size:1.1rem">'+esc(alunoNomeOriginal)+'</h3>'+
-             '</div>'+
-             '<div style="margin-top:4px; font-size:0.85rem; display:flex; gap:10px; align-items:center">'+
-               '<b style="color:var(--pri)">R$ '+fmt(valorMensal)+'</b>'+
-               '<span class="bd '+(pago?'ok':'warn')+'">'+(pago?'✓ Pago':'⚠️ Pendente')+'</span>'+
-             '</div>'+
-             '<div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px">'+
-               '<span class="bd ok">📊 Aderência: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+')</span>'+
-               avisoTreinoBadge+
-             '</div>'+
-             '<div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap">'+
-               '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link</button>'+
-               '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="duplicarTreinos" data-id="'+esc(u)+'">👥 Copiar Treino</button>'+
-               '<button class="btn s t" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="gerarPDF" data-id="'+esc(u)+'">📄 PDF</button>'+
+   const renderizarCardsAlunos = (lista, tituloSecao) => {
+     if(!lista.length) return '';
+     let res = `<h3 style="font-size:0.95rem; color:var(--mu); margin:16px 0 8px; text-transform:uppercase; letter-spacing:0.04em">${tituloSecao} (${lista.length})</h3>`;
+     res += lista.map(({u, index}) => {
+       const checked = 'checked';
+       const alunoNomeOriginal = D.perfis[u].n;
+       const valorMensal = D.perfis[u].valor || 0;
+       const nomeParam = slugify(alunoNomeOriginal);
+       const linkAluno = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + '?aluno=' + nomeParam;
+       
+       const anamU = D.anamnese && D.anamnese[u];
+       const metaDiasSemana = anamU && parseInt(anamU.dias) ? parseInt(anamU.dias) : 3;
+       const metaMes = metaDiasSemana * 4;
+       const hListAluno = hist(u);
+       const treinosMes = hListAluno.filter(item => item.d && item.d.startsWith(mesAtual)).length;
+       const aderenciaPct = Math.min(100, Math.round((treinosMes / metaMes) * 100));
+
+       const pago = D.financeiro && D.financeiro[u] && D.financeiro[u][mesAtual];
+       const ultimoTreino = hListAluno.length ? hListAluno[0] : null;
+       const concluiuHoje = ultimoTreino && ultimoTreino.d === hojeStr;
+       const avisoTreinoBadge = concluiuHoje ? `<span class="bd ok" style="background:var(--pri-t); color:var(--pri); border-color:var(--pri)">🔔 Concluiu treino hoje! (${dt(ultimoTreino.d)} · ${esc(ultimoTreino.n)})</span>` : (ultimoTreino ? `<span class="bd" style="color:var(--mu)">Último treino: ${dt(ultimoTreino.d)}</span>` : `<span class="bd warn">Nenhum treino ainda</span>`);
+
+       return '<div class="card" style="border-left: 3px solid '+(concluiuHoje?'var(--pri)':'var(--ln2)')+'">'+
+         '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px">'+
+           '<div style="display:flex; gap:10px; align-items:flex-start">'+
+             '<input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" checked style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer; margin-top:2px" title="Marcar como Feito">'+
+             '<div>'+
+               '<div style="display:flex; align-items:center; gap:8px">'+
+                 '<span class="mu" style="font-weight:700">#'+(index+1)+'</span>'+
+                 '<h3 style="font-size:1.1rem">'+esc(alunoNomeOriginal)+'</h3>'+
+               '</div>'+
+               '<div style="margin-top:4px; font-size:0.85rem; display:flex; gap:10px; align-items:center">'+
+                 '<b style="color:var(--pri)">R$ '+fmt(valorMensal)+'</b>'+
+                 '<span class="bd '+(pago?'ok':'warn')+'">'+(pago?'✓ Pago':'⚠️ Pendente')+'</span>'+
+               '</div>'+
+               '<div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px">'+
+                 '<span class="bd ok">📊 Aderência: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+')</span>'+
+                 avisoTreinoBadge+
+               '</div>'+
+               '<div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap">'+
+                 '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link</button>'+
+                 '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="duplicarTreinos" data-id="'+esc(u)+'">👥 Copiar Treino</button>'+
+                 '<button class="btn s t" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="gerarPDF" data-id="'+esc(u)+'">📄 PDF</button>'+
+               '</div>'+
              '</div>'+
            '</div>'+
+           '<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">'+
+             '<button class="btn s" style="margin:0" data-c="open" data-id="'+esc(u)+'">Abrir Aluno</button>'+
+             '<button class="x" data-c="delAluno" data-id="'+esc(u)+'" style="color:var(--danger)">Excluir</button>'+
+           '</div>'+
          '</div>'+
-         '<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">'+
-           '<button class="btn s" style="margin:0" data-c="open" data-id="'+esc(u)+'">Abrir Aluno</button>'+
-           '<button class="x" data-c="delAluno" data-id="'+esc(u)+'" style="color:var(--danger)">Excluir</button>'+
+       '</div>';
+     }).join('');
+     return res;
+   };
+
+   // Render para os não marcados (desmarcados)
+   const renderizarCardsAlunosNaoFeitos = (lista, tituloSecao) => {
+     if(!lista.length) return '';
+     let res = `<h3 style="font-size:0.95rem; color:var(--mu); margin:16px 0 8px; text-transform:uppercase; letter-spacing:0.04em">${tituloSecao} (${lista.length})</h3>`;
+     res += lista.map(({u, index}) => {
+       const alunoNomeOriginal = D.perfis[u].n;
+       const valorMensal = D.perfis[u].valor || 0;
+       const nomeParam = slugify(alunoNomeOriginal);
+       const linkAluno = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + '?aluno=' + nomeParam;
+       
+       const anamU = D.anamnese && D.anamnese[u];
+       const metaDiasSemana = anamU && parseInt(anamU.dias) ? parseInt(anamU.dias) : 3;
+       const metaMes = metaDiasSemana * 4;
+       const hListAluno = hist(u);
+       const treinosMes = hListAluno.filter(item => item.d && item.d.startsWith(mesAtual)).length;
+       const aderenciaPct = Math.min(100, Math.round((treinosMes / metaMes) * 100));
+
+       const pago = D.financeiro && D.financeiro[u] && D.financeiro[u][mesAtual];
+       const ultimoTreino = hListAluno.length ? hListAluno[0] : null;
+       const concluiuHoje = ultimoTreino && ultimoTreino.d === hojeStr;
+       const avisoTreinoBadge = concluiuHoje ? `<span class="bd ok" style="background:var(--pri-t); color:var(--pri); border-color:var(--pri)">🔔 Concluiu treino hoje! (${dt(ultimoTreino.d)} · ${esc(ultimoTreino.n)})</span>` : (ultimoTreino ? `<span class="bd" style="color:var(--mu)">Último treino: ${dt(ultimoTreino.d)}</span>` : `<span class="bd warn">Nenhum treino ainda</span>`);
+
+       return '<div class="card" style="border-left: 3px solid '+(concluiuHoje?'var(--pri)':'var(--ln2)')+'">'+
+         '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px">'+
+           '<div style="display:flex; gap:10px; align-items:flex-start">'+
+             '<input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer; margin-top:2px" title="Marcar como Feito">'+
+             '<div>'+
+               '<div style="display:flex; align-items:center; gap:8px">'+
+                 '<span class="mu" style="font-weight:700">#'+(index+1)+'</span>'+
+                 '<h3 style="font-size:1.1rem">'+esc(alunoNomeOriginal)+'</h3>'+
+               '</div>'+
+               '<div style="margin-top:4px; font-size:0.85rem; display:flex; gap:10px; align-items:center">'+
+                 '<b style="color:var(--pri)">R$ '+fmt(valorMensal)+'</b>'+
+                 '<span class="bd '+(pago?'ok':'warn')+'">'+(pago?'✓ Pago':'⚠️ Pendente')+'</span>'+
+               '</div>'+
+               '<div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px">'+
+                 '<span class="bd ok">📊 Aderência: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+')</span>'+
+                 avisoTreinoBadge+
+               '</div>'+
+               '<div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap">'+
+                 '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link</button>'+
+                 '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="duplicarTreinos" data-id="'+esc(u)+'">👥 Copiar Treino</button>'+
+                 '<button class="btn s t" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="gerarPDF" data-id="'+esc(u)+'">📄 PDF</button>'+
+               '</div>'+
+             '</div>'+
+           '</div>'+
+           '<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">'+
+             '<button class="btn s" style="margin:0" data-c="open" data-id="'+esc(u)+'">Abrir Aluno</button>'+
+             '<button class="x" data-c="delAluno" data-id="'+esc(u)+'" style="color:var(--danger)">Excluir</button>'+
+           '</div>'+
          '</div>'+
-       '</div>'+
-     '</div>';
-    }).join('');
+       '</div>';
+     }).join('');
+     return res;
+   };
+
+   if(idsFiltrados.length){
+     h += renderizarCardsAlunosNaoFeitos(listaNaoFeitos, '📌 Alunos Pendentes');
+     h += renderizarCardsAlunos(listaFeitos, '✅ Alunos Marcados / Concluídos');
    } else {
-    h+='<div class="card"><p class="mu">Nenhum aluno encontrado com esses critérios.</p></div>';
+     h += '<div class="card"><p class="mu">Nenhum aluno encontrado com esses critérios.</p></div>';
    }
  }
 
@@ -2052,6 +2150,7 @@ async function toggleCheck(u, status){
  if(!D.checks) D.checks = {};
  D.checks[u] = status;
  await savePartial('checks', u, status);
+ viewC();
 }
 
 async function togglePagamentoPin(u, status){
@@ -2188,24 +2287,6 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
     alert('Aluno destino não encontrado.');
   }
  }
- else if(c==='aplicarTemplateGlobal'){
-  const tid = b.dataset.tid;
-  const tpl = D.templates[tid];
-  const alunosIds = Object.keys(D.perfis||{});
-  if(!alunosIds.length){ alert('Nenhum aluno cadastrado.'); return; }
-  const alunoEscolhido = prompt('Digite o nome ou ID do aluno que receberá este template:\n\n' + alunosIds.join('\n'));
-  if(alunoEscolhido && D.perfis[alunoEscolhido]){
-    const novaRotina = { id: Date.now(), tipo: 'musculacao', n: tpl.n, diaSemana: 'Segunda-feira', ex: JSON.parse(JSON.stringify(tpl.ex)) };
-    if(!D.rotinas) D.rotinas = {};
-    if(!D.rotinas[alunoEscolhido]) D.rotinas[alunoEscolhido] = { rt: [] };
-    D.rotinas[alunoEscolhido].rt.push(novaRotina);
-    await savePartial('rotinas', alunoEscolhido, D.rotinas[alunoEscolhido]);
-    alert('Template aplicado com sucesso para ' + D.perfis[alunoEscolhido].n + '!');
-    view();
-  } else if(alunoEscolhido) {
-    alert('Aluno não encontrado.');
-  }
- }
  else if(c==='editarTemplate'){
   const tid = b.dataset.tid;
   const tpl = D.templates[tid];
@@ -2249,15 +2330,6 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   delete D.templates[tid];
   await save();
   view();
- }
- else if(c==='aplicarTemplate'){
-  const tid = b.dataset.tid;
-  const tpl = D.templates[tid];
-  if(tpl && u){
-   const novaRotina = { id: Date.now(), tipo: 'musculacao', n: tpl.n, diaSemana: 'Segunda-feira', ex: JSON.parse(JSON.stringify(tpl.ex)) };
-   await saveR([...rts(u), novaRotina]);
-   view();
-  }
  }
  else if(c==='novoAluno'){
   const nome = prompt('Digite o nome do novo aluno:');
