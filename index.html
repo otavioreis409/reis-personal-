@@ -488,10 +488,11 @@ const work=s=>s.filter(x=>x.t!=='A');
 let D = JSON.parse(localStorage.getItem('reis_db') || '{"perfis":{},"treinos":{},"rotinas":{},"coment":{},"checks":{},"anamnese":{}}');
 if(!D.checks) D.checks = {};
 if(!D.anamnese) D.anamnese = {};
+if(!D.rotinas) D.rotinas = {};
 
 const urlParams = new URLSearchParams(window.location.search);
 let urlAluno = urlParams.get('aluno');
-let me = urlAluno ? ('aluno_' + urlAluno.toLowerCase().replace(/[^a-z0-9]/g, '_')) : '';
+let me = urlAluno ? ('aluno_' + urlAluno.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '_')) : '';
 
 let coachView = !urlAluno && localStorage.getItem('reis_coach') === '1', tab = 0, W = null, tk = null, rest = 0, ed = null, open = null;
 
@@ -550,7 +551,6 @@ function precisaAnamnese(){
   if(coachView || !urlAluno) return false;
   const a = D.anamnese[me];
   if(!a) return true;
-  // 2 meses = 60 dias em milissegundos (60 * 24 * 60 * 60 * 1000 = 5184000000)
   const doisMeses = 5184000000;
   if(Date.now() - a.data > doisMeses) return true;
   return false;
@@ -689,7 +689,6 @@ function viewC(){
 
   h='<button class="x" data-c="back">← Todos os alunos</button><h2 style="margin-top:4px;font-size:1.4rem">'+esc(D.perfis[u].n)+'</h2>';
   
-  // Card de Anamnese e IMC
   h+='<div class="card"><h3>📊 Anamnese e Avaliação</h3>'+
      '<div style="margin-top:8px; display:grid; gap:4px; font-size:0.9rem">'+
      '<div><b>Altura:</b> '+(anam.alt?anam.alt+' m':'Não informada')+'</div>'+
@@ -701,7 +700,6 @@ function viewC(){
      '<div><b>Dores articulares:</b> <span style="color:'+(anam.dor&&anam.dor.toLowerCase()!=='nenhuma'?'var(--danger)':'var(--ok)')+'">'+(anam.dor||'Nenhuma relatada')+'</span></div>'+
      '</div></div>';
 
-  // Tabela de Evolução / Melhora
   const hList = hist(u);
   h+='<h2>📈 Tabela de Melhora / Histórico</h2>'+
      '<div class="card" style="overflow-x:auto">'+
@@ -735,7 +733,11 @@ function toggleCheck(u, status){
 
 $('vt').addEventListener('input',e=>{const t=e.target;if(!ed)return;if(t.dataset.ed)ed.n=t.value;else if(t.dataset.f){const x=ed.ex[t.dataset.i];x[t.dataset.f]=t.dataset.f==='k'?(parseInt(t.value)||1):t.value}});
 $('vt').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;const c=b.dataset.c,id=b.dataset.id,i=b.dataset.i,u=open;
- const saveR=r=>{D.rotinas[u]={rt:r};save()};
+ const saveR=r=>{
+  if(!D.rotinas[u]) D.rotinas[u] = {};
+  D.rotinas[u].rt = r;
+  save();
+ };
  if(c==='novoAluno'){
   const nome = prompt('Digite o nome do novo aluno:');
   if(nome && nome.trim()){
@@ -770,9 +772,13 @@ $('vt').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)
  else if(c==='addE')ed.ex.push({e:'',k:3,r:'10',v:''});
  else if(c==='rmE')ed.ex.splice(i,1);
  else if(c==='cancelR')ed=null;
- else if(c==='saveR'){const ex=ed.ex.filter(x=>x.e.trim()).map(x=>({e:x.e.trim(),k:x.k||3,r:String(x.r||'10').trim(),v:/^https?:\/\//i.test(x.v.trim())?x.v.trim():''}));
-  if(!ed.n.trim()||!ex.length)return;const r={id:ed.rid||Date.now(),n:ed.n.trim(),ex};
-  saveR(ed.rid?rts(u).map(x=>x.id===ed.rid?r:x):[...rts(u),r]);ed=null}
+ else if(c==='saveR'){
+  const ex=ed.ex.filter(x=>x.e.trim()).map(x=>({e:x.e.trim(),k:x.k||3,r:String(x.r||'10').trim(),v:/^https?:\/\//i.test(x.v.trim())?x.v.trim():''}));
+  if(!ed.n.trim()||!ex.length)return;
+  const r={id:ed.rid||Date.now(),n:ed.n.trim(),ex};
+  saveR(ed.rid?rts(u).map(x=>x.id===ed.rid?r:x):[...rts(u),r]);
+  ed=null;
+ }
  else if(c==='cm'){const w=b.dataset.w,t=$('c'+w).value.trim(),m={...cms(u)};if(t)m[w]=t;else delete m[w];D.coment[u]={c:m};save();document.activeElement.blur()}
  view()});
 
