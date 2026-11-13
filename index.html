@@ -103,6 +103,7 @@ h2:first-child{margin-top:0}
   padding:16px;
   margin-bottom:12px;
   box-shadow:var(--sh);
+  transition:transform .15s ease;
 }
 .card h3{margin:0 0 4px;font-size:1rem;font-weight:700;letter-spacing:-.01em}
 .mu{color:var(--mu);font-size:.82rem}
@@ -212,6 +213,22 @@ h2:first-child{margin-top:0}
   border-radius:9999px;
 }
 
+/* Barra de Progresso Real no Topo do Treino */
+.prog-container{
+  background:var(--ln);
+  height:4px;
+  width:100%;
+  position:sticky;
+  top:57px;
+  z-index:4;
+}
+.prog-bar{
+  background:var(--ok);
+  height:100%;
+  width:0%;
+  transition:width .3s ease;
+}
+
 .rest{
   position:fixed;
   bottom:calc(20px + env(safe-area-inset-bottom,0px));
@@ -297,12 +314,16 @@ td input::placeholder{color:var(--mu2);font-weight:600}
   cursor:pointer;
   font-weight:700;
   font-family:inherit;
-  transition:all .12s;
+  transition:all .2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ck:active{
+  transform:scale(0.88);
 }
 tr.d .ck{
   background:var(--ok);
   border-color:var(--ok);
   color:var(--on-ok);
+  box-shadow:0 0 12px rgba(48,209,88,0.4);
 }
 tr.d .ty{
   background:var(--ok-t);
@@ -316,13 +337,18 @@ tr.d .ty{
 .vd{
   display:inline-flex;
   align-items:center;
-  gap:4px;
-  margin-top:4px;
+  gap:6px;
+  margin-top:6px;
   color:var(--acc);
-  font-size:.8rem;
+  background:var(--acc-t);
+  padding:4px 10px;
+  border-radius:8px;
+  font-size:.78rem;
   font-weight:600;
   text-decoration:none;
+  transition:opacity .15s;
 }
+.vd:hover{opacity:.8}
 .x{
   background:none;
   border:0;
@@ -788,19 +814,43 @@ function start(rotina){
  $('w').hidden=false;document.body.style.overflow='hidden';draw();clearInterval(tk);tk=setInterval(()=>{if(!W)return;const t=$('tm');if(t)t.textContent=mmss(Math.floor((Date.now()-W.t0)/1000));if(rest>0)rest--;const r=$('rs');if(r){r.hidden=rest<=0;r.firstChild.textContent=mmss(rest)}},1000)
 }
 
-function draw(){if(W.ph==='ck')return drawCk();if(W.ph==='pse')return drawPse();W.tipo==='corrida'?drawRunW():drawW()}
+function draw(){if(W.ph==='ck')return drawCk();if(W.ph==='pse')return drawPse();W.tipo==='corrida'?drawRunW():drawW();updateProgBar();}
+
+function updateProgBar(){
+  if(!W) return;
+  let total = 0, done = 0;
+  if(W.tipo === 'corrida'){
+    total = W.ex.length;
+    done = W.ex.filter(x=>x.d).length;
+  } else {
+    W.ex.forEach(x => {
+      x.s.forEach(s => {
+        total++;
+        if(s.d) done++;
+      });
+    });
+  }
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const bar = $('progBar');
+  if(bar) bar.style.width = pct + '%';
+}
 
 function drawRunW(){
- $('w').innerHTML='<div class="wt"><button class="x" data-a="cancel">Cancelar</button><span class="wt-timer">⏱ <span id="tm">'+mmss(Math.floor((Date.now()-W.t0)/1000))+'</span></span><button class="btn s" style="margin:0" data-a="end">Finalizar</button></div><div style="padding:4px 16px;max-width:640px;margin:0 auto"><h2 class="wt-title">🏃 '+esc(W.n)+'</h2><p class="mu" style="margin:0 0 14px">Complete cada bloco de corrida respeitando a zona e o pace alvo.</p>'+
+ $('w').innerHTML='<div class="wt"><button class="x" data-a="cancel">Cancelar</button><span class="wt-timer">⏱ <span id="tm">'+mmss(Math.floor((Date.now()-W.t0)/1000))+'</span></span><button class="btn s" style="margin:0" data-a="end">Finalizar</button></div>'+
+ '<div class="prog-container"><div class="prog-bar" id="progBar"></div></div>'+
+ '<div style="padding:4px 16px;max-width:640px;margin:0 auto"><h2 class="wt-title">🏃 '+esc(W.n)+'</h2><p class="mu" style="margin:0 0 14px">Complete cada bloco de corrida respeitando a zona e o pace alvo.</p>'+
  W.ex.map((x,xi)=>'<div class="card ex" style="border-left: 3px solid '+(x.d?'var(--ok)':'var(--acc)')+'">'+
    '<div style="display:flex;justify-content:space-between;align-items:center"><div><h3>'+esc(x.e)+'</h3><div style="margin-top:4px"><span class="z-badge '+x.zona.toLowerCase()+'">'+esc(x.zona)+'</span> <span class="bd">Alvo: <b>'+esc(x.dist)+'</b></span> <span class="bd">Pace: <b style="color:var(--pri)">'+esc(x.paceAlvo||'Livre')+'</b></span></div></div>'+
    '<button class="ck" style="background:'+(x.d?'var(--ok)':'var(--pill)')+';color:'+(x.d?'var(--on-ok)':'var(--mu)')+';border-color:'+(x.d?'var(--ok)':'var(--ln2)')+'" data-a="ckRun" data-x="'+xi+'">✓</button></div>'+
    '<div style="margin-top:10px"><input class="t" style="min-height:38px;padding:8px 12px;font-size:0.85rem" data-rk="realizado" data-x="'+xi+'" value="'+esc(x.realizado)+'" placeholder="Pace ou tempo real feito (opcional)"></div>'+
  '</div>').join('')+'</div>';
+ updateProgBar();
 }
 
 function drawW(){
- $('w').innerHTML='<div class="wt"><button class="x" data-a="cancel">Cancelar</button><span class="wt-timer">⏱ <span id="tm">'+mmss(Math.floor((Date.now()-W.t0)/1000))+'</span></span><button class="btn s" style="margin:0" data-a="end">Finalizar</button></div><div class="rest" id="rs" '+(rest>0?'':'hidden')+'><span>'+mmss(rest)+'</span><button class="x" data-a="skip">Pular</button></div><div style="padding:4px 16px;max-width:640px;margin:0 auto"><h2 class="wt-title">'+esc(W.n)+'</h2><p class="mu" style="margin:0 0 14px">Toque no número da série para alternar: A aquecimento · F falha · D drop.</p>'+
+ $('w').innerHTML='<div class="wt"><button class="x" data-a="cancel">Cancelar</button><span class="wt-timer">⏱ <span id="tm">'+mmss(Math.floor((Date.now()-W.t0)/1000))+'</span></span><button class="btn s" style="margin:0" data-a="end">Finalizar</button></div>'+
+ '<div class="prog-container"><div class="prog-bar" id="progBar"></div></div>'+
+ '<div class="rest" id="rs" '+(rest>0?'':'hidden')+'><span>'+mmss(rest)+'</span><button class="x" data-a="skip">Pular</button></div><div style="padding:4px 16px;max-width:640px;margin:0 auto"><h2 class="wt-title">'+esc(W.n)+'</h2><p class="mu" style="margin:0 0 14px">Toque no número da série para alternar: A aquecimento · F falha · D drop.</p>'+
  W.ex.map((x,xi)=>{
    const p0 = prev(x.e, 0);
    const prevText = p0 ? 'Semana passada: ' + fmt(p0.kg) + 'kg × ' + p0.r + 'r' : 'Sem histórico anterior';
@@ -811,6 +861,7 @@ function drawW(){
    '<input class="t" style="margin-top:6px;min-height:38px;font-size:0.85rem;border-color:var(--acc)" data-video="'+xi+'" value="'+esc(x.videoAluno||'')+'" placeholder="🔗 Cole aqui o link do vídeo da sua execução..."></div>';
  }).join('')+
  '</div>';
+ updateProgBar();
 }
 
 $('w').addEventListener('input',e=>{
@@ -1073,7 +1124,6 @@ function viewC(){
      h += ed.ex.map((x,i)=>{
        const exerIdx = i;
        
-       // Histórico anterior do aluno neste exercício específico para auxiliar o treinador
        let lastPerfText = '';
        const alunoHist = hist(u).filter(item=>item.tipo!=='corrida');
        for(const th of alunoHist){
@@ -1191,7 +1241,6 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
  else if(c==='tagNota'){
    const exIdx = b.dataset.ex;
    const notaTag = b.dataset.nota;
-   // Adiciona ao nome ou mantém numa propriedade auxiliar se desejado, aqui pomos no nome do exercício ou criamos alerta
    alert('Tag selecionada: ' + notaTag);
  }
  else if(c==='novoTemplate'){
