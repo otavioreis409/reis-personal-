@@ -97,7 +97,10 @@ body{
 .seg button.on{background:var(--pri);color:var(--on-pri);font-weight:700}
 
 main{max-width:680px;margin:0 auto;padding:20px 16px}
-body.is-coach main{max-width:none!important;width:100%!important;padding:24px 32px;}
+body.is-coach main{max-width:none!important;width:100%!important;padding:16px 16px;}
+@media(min-width: 768px) {
+  body.is-coach main{padding:24px 32px;}
+}
 
 h2{font-size:1.15rem;font-weight:700;margin:24px 0 12px;letter-spacing:-.01em}
 h2:first-child{margin-top:0}
