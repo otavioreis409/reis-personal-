@@ -464,6 +464,19 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   padding: 16px;
 }
 
+/* Modal de Check-in Pré-treino e Pós-treino */
+#modalCheckin {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+
 /* Modal de Busca de Exercícios por Grupo Muscular */
 #modalBuscaEx {
   position: fixed;
@@ -487,6 +500,7 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   flex-direction: column;
   padding: 20px;
   box-shadow: var(--sh-float);
+  overflow-y: auto;
 }
 .muscle-chips-container {
   display: flex;
@@ -672,6 +686,7 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
 <div class="tabs" id="tabs"><button data-v="0"><b>🏋️</b>Treino</button><button data-v="1"><b>🗓️</b>Histórico</button><button data-v="2"><b>📈</b>Progresso</button></div>
 <div id="w" hidden></div>
 <div id="modalRpeInfo" hidden></div>
+<div id="modalCheckin" hidden></div>
 <div id="modalBuscaEx" hidden></div>
 <datalist id="exl"></datalist>
 <script>
@@ -802,6 +817,8 @@ let me = urlAluno ? ('aluno_' + slugify(urlAluno)) : '';
 
 let coachView = !urlAluno && localStorage.getItem('reis_coach') === '1', coachTab = 'inicio', tab = 0, W = null, tk = null, rest = 0, ed = null, edTpl = null, open = null;
 let filtroMusculoAtual = 'Todos';
+let filtroAlunosBusca = '';
+let filtroAlunosStatus = 'todos'; 
 
 function calcularPacesCooper(alunoId){
   const list = (D.cooper && D.cooper[alunoId]) || [];
@@ -1015,10 +1032,12 @@ function histHTML(h,o){return h.length?h.map(w=>{
   '</div>';
 }).join(''):'<p class="mu">Nenhum treino finalizado ainda.</p>'}
 
-function ckHTML(w){if(!w.ck&&w.pse==null)return '';const c=w.ck,o=[];
- if(c){o.push('<span class="bd">🔋 Recup: '+c.rec+'/5</span>','<span class="bd">😴 Sono: '+c.sono+'/5</span>');
-  o.push(c.dor?'<span class="bd warn">⚠ Dor: '+esc((c.locs||[]).join(', ')||'local')+' ('+c.int+'/10)</span>':'<span class="bd ok">Sem dor</span>')}
- if(w.pse!=null)o.push('<span class="bd">🔥 PSE: '+w.pse+'/10</span>');
+function ckHTML(w){if(!w.readiness&&w.pse==null)return '';const r=w.readiness,o=[];
+ if(r){
+  o.push('<span class="bd">🔋 Disp: '+r.disp+'/5</span>','<span class="bd">😴 Sono: '+r.sono+'/5</span>');
+  o.push(r.dor ? '<span class="bd warn">⚠ Dor: '+esc(r.dor)+'</span>' : '<span class="bd ok">Sem dor</span>');
+ }
+ if(w.pse!=null) o.push('<span class="bd" style="background:var(--pri-t); color:var(--pri)">🔥 Esforço Geral (PSE): '+w.pse+'/10</span>');
  return '<div style="margin-bottom:6px">'+o.join('')+'</div>'}
 
 function viewA(){
@@ -1042,7 +1061,7 @@ function viewA(){
    '</div></div><button class="btn s t" style="margin-top:14px; width:100%" data-r="'+r.id+'">Iniciar rotina</button></div>';
  }).join(''):'<p class="mu">Seu treinador ainda não montou rotinas para você.</p>');
 
- document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const r=R.find(x=>x.id==b.dataset.r);start(r)});
+ document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const r=R.find(x=>x.id==b.dataset.r);iniciarComCheckin(r)});
  $('hs').innerHTML=histHTML(hist(me),{del:1,cm:cms(me)});
  document.querySelectorAll('[data-h]').forEach(b=>b.onclick=async()=>{const h=hist(me).filter(w=>w.id!=b.dataset.h);if(!D.treinos)D.treinos={};D.treinos[me]={h};await savePartial('treinos', me, D.treinos[me]);view()});
  
@@ -1201,23 +1220,84 @@ function renderProgressoAluno(){
   $('ch').innerHTML = chartHtml;
 }
 
-function start(r){
+function iniciarComCheckin(r){
+  const modal = $('modalCheckin');
+  modal.innerHTML = `
+    <div class="modal-box">
+      <h3 style="color:var(--pri); margin-bottom:6px">⚡ Check-in de Prontidão</h3>
+      <p class="mu" style="margin-bottom:16px">Como você está se sentindo para iniciar o treino "${esc(r.n)}" hoje?</p>
+      
+      <label class="mu" style="font-size:0.75rem">🔋 Disposição / Energia (1 a 5)</label>
+      <select class="t" id="chkDisp" style="margin-bottom:12px">
+        <option value="5">5 - Excelente / Muito Disposto</option>
+        <option value="4">4 - Bom</option>
+        <option value="3" selected>3 - Normal / Ok</option>
+        <option value="2">2 - Cansado / Baixa Energia</option>
+        <option value="1">1 - Exausto</option>
+      </select>
+
+      <label class="mu" style="font-size:0.75rem">😴 Qualidade do Sono (1 a 5)</label>
+      <select class="t" id="chkSono" style="margin-bottom:12px">
+        <option value="5">5 - Ótima noite de sono</option>
+        <option value="4">4 - Boa</option>
+        <option value="3" selected>3 - Regular</option>
+        <option value="2">2 - Ruim / Mal dormido</option>
+        <option value="1">1 - Péssima</option>
+      </select>
+
+      <label class="mu" style="font-size:0.75rem">⚠️ Sente alguma dor articular ou incômodo?</label>
+      <input class="t" id="chkDor" placeholder="Ex: Nenhuma (ou especifique local e intensidade)" style="margin-bottom:20px">
+
+      <button class="btn t" onclick="confirmarCheckinEStart(${JSON.stringify(r).replace(/"/g, '&quot;')})">Prosseguir para o Treino</button>
+    </div>
+  `;
+  modal.hidden = false;
+}
+
+function confirmarCheckinEStart(r){
+  const disp = parseInt($('chkDisp').value) || 3;
+  const sono = parseInt($('chkSono').value) || 3;
+  const dor = $('chkDor').value.trim();
+
+  $('modalCheckin').hidden = true;
+  start(r, { disp, sono, dor });
+}
+
+function start(r, readinessData){
   W = {
     id: r.id,
     n: r.n,
     tipo: r.tipo || 'musculacao',
     d: new Date().toISOString().slice(0,10),
     dur: 0,
+    readiness: readinessData || { disp: 3, sono: 3, dor: 'Nenhuma' },
     ex: JSON.parse(JSON.stringify(r.ex))
   };
+  
+  const hList = hist(me);
   W.ex.forEach(x=>{
     if(x.s){
-      x.s.forEach(s=>{
+      let ultimaCargaSugerida = null;
+      for(let ant of hList){
+        if(ant.ex){
+          let achado = ant.ex.find(e => e.e === x.e);
+          if(achado && achado.s && achado.s[0]){
+            ultimaCargaSugerida = achado.s[0].kg;
+            break;
+          }
+        }
+      }
+
+      x.s.forEach((s, si)=>{
         if(s.rf === undefined) s.rf = s.r !== undefined ? s.r : '';
         if(s.rpef === undefined) s.rpef = s.rpe !== undefined ? s.rpe : '';
+        if((s.kg === 0 || s.kg === undefined) && ultimaCargaSugerida !== null){
+          s.kg = ultimaCargaSugerida;
+        }
       });
     }
   });
+
   saveActiveWorkout();
   tk = setInterval(()=>{ W.dur++; if($('wt-t')) $('wt-t').textContent = mmss(W.dur); saveActiveWorkout(); }, 1000);
   renderW();
@@ -1298,7 +1378,7 @@ function renderW(){
           <h3>${esc(x.e)}</h3>
           ${x.v ? '<a class="vd" href="'+esc(x.v)+'" target="_blank" rel="noopener">▶ Vídeo</a>' : ''}
         </div>
-        <div class="mu" style="margin-top:2px">⏱️ Descanso sugerido: <b>${descansoSeg}s</b> após cada série</div>
+        <div class="mu" style="margin-top:2px">⏱️ Descanso sugerido: <b>${descansoSeg}s</b> após cada série (💡 Carga sugerida baseada no último treino)</div>
         <table>
           <tr><th>S</th><th>Kg</th><th>Reps (Alvo)</th><th>Reps (Feito)</th><th>RPE (Alvo)</th><th>RPE (Feito)</th><th>Ok</th></tr>`;
       
@@ -1323,7 +1403,7 @@ function renderW(){
     });
   }
 
-  h += `<button class="btn t" style="margin-top:20px" onclick="finalizarTreino()">Finalizar Treino</button>
+  h += `<button class="btn t" style="margin-top:20px" onclick="solicitarPseFinalizacao()">Finalizar Treino</button>
         <button class="btn g" style="margin-top:10px" onclick="if(confirm('Cancelar treino atual?')){clearInterval(tk);W=null;localStorage.removeItem('reis_treino_ativo_'+me);$('w').hidden=true;view()}">Cancelar Treino</button>
         </main>`;
 
@@ -1361,14 +1441,43 @@ function toggleSérieDone(xi, si, tempoDescanso){
   renderW();
 }
 
-async function finalizarTreino(){
+function solicitarPseFinalizacao(){
+  const modal = $('modalCheckin');
+  modal.innerHTML = `
+    <div class="modal-box">
+      <h3 style="color:var(--pri); margin-bottom:6px">🔥 Avaliação Pós-Treino (PSE)</h3>
+      <p class="mu" style="margin-bottom:16px">De 1 a 10, qual foi o nível de esforço e cansaço geral deste treino?</p>
+      
+      <select class="t" id="selectPseFinal" style="margin-bottom:20px">
+        <option value="10">10 - Máximo / Exaustão total</option>
+        <option value="9">9 - Muito pesado</option>
+        <option value="8">8 - Pesado</option>
+        <option value="7" selected>7 - Moderado a Pesado</option>
+        <option value="6">6 - Moderado</option>
+        <option value="5">5 - Leve a Moderado</option>
+        <option value="4">4 - Leve</option>
+        <option value="1">1 a 3 - Muito leve / Regenerativo</option>
+      </select>
+
+      <button class="btn t" onclick="concluirFinalizacaoTreino()">Concluir e Salvar Treino</button>
+    </div>
+  `;
+  modal.hidden = false;
+}
+
+async function concluirFinalizacaoTreino(){
+  const pseVal = parseInt($('selectPseFinal').value) || 7;
+  $('modalCheckin').hidden = true;
   clearInterval(tk);
+
   if(W.tipo === 'corrida'){
     W.ex.forEach((x, i)=>{
       const el = $('run_res_'+i);
       if(el) x.realizado = el.value.trim();
     });
   }
+
+  W.pse = pseVal;
 
   let isPR = false;
   const historicoAntigo = hist(me);
@@ -1524,6 +1633,25 @@ function setCoachTab(tabName){
   viewC();
 }
 
+function exportarDadosCSV(){
+  let csvContent = "data:text/csv;charset=utf-8,ID_Aluno;Nome;Valor_Mensalidade;Total_Treinos_Historico\n";
+  const ids = Object.keys(D.perfis || {});
+  ids.forEach(u => {
+    const nome = D.perfis[u].n || '';
+    const valor = D.perfis[u].valor || 0;
+    const qtdTreinos = hist(u).length;
+    csvContent += `${u};"${nome}";${valor};${qtdTreinos}\n`;
+  });
+
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "alunos_reis_personal.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 function viewC(){
  const ids = Object.keys(D.perfis||{});
  const mesAtual = new Date().toISOString().slice(0,7);
@@ -1569,9 +1697,12 @@ function viewC(){
 
  if(coachTab === 'inicio' && !open){
    h += `
-    <div style="margin-bottom:20px">
-      <h2 style="font-size:1.3rem; margin-bottom:4px">Olá, Coach.</h2>
-      <p class="mu">Acompanhe sua operação de treinamento em tempo real.</p>
+    <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center">
+      <div>
+        <h2 style="font-size:1.3rem; margin-bottom:4px">Olá, Coach.</h2>
+        <p class="mu">Acompanhe sua operação de treinamento em tempo real.</p>
+      </div>
+      <button class="btn s g" onclick="exportarDadosCSV()">📥 Exportar CSV</button>
     </div>
     
     <div class="dashboard-kpi-grid">
@@ -1700,11 +1831,40 @@ function viewC(){
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
       <h2 style="margin:0">👥 Lista de Alunos (${totalAlunos})</h2>
     </div>
+    
+    <!-- Barra de Pesquisa e Filtros -->
+    <div style="margin-bottom: 12px; display: grid; gap: 8px;">
+      <input class="t" id="buscaAlunosInput" placeholder="🔍 Pesquisar aluno por nome..." value="${esc(filtroAlunosBusca)}" oninput="filtroAlunosBusca=this.value; viewC()">
+      <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;">
+        <button class="muscle-chip ${filtroAlunosStatus==='todos'?'on':''}" onclick="filtroAlunosStatus='todos'; viewC()">Todos</button>
+        <button class="muscle-chip ${filtroAlunosStatus==='pagos'?'on':''}" onclick="filtroAlunosStatus='pagos'; viewC()">✓ Pagos</button>
+        <button class="muscle-chip ${filtroAlunosStatus==='pendentes'?'on':''}" onclick="filtroAlunosStatus='pendentes'; viewC()">⚠️ Pendentes</button>
+        <button class="muscle-chip ${filtroAlunosStatus==='hoje'?'on':''}" onclick="filtroAlunosStatus='hoje'; viewC()">🔔 Treinaram Hoje</button>
+      </div>
+    </div>
+
     <button class="btn t" style="margin-bottom:16px" data-c="novoAluno">+ Adicionar Novo Aluno</button>
    `;
 
-   if(ids.length){
-    h+=ids.map((u, index)=>{
+   const hojeStr = new Date().toISOString().slice(0,10);
+   const idsFiltrados = ids.filter(u => {
+     const nomeAluno = (D.perfis[u].n || '').toLowerCase();
+     const matchBusca = nomeAluno.includes(filtroAlunosBusca.toLowerCase());
+     
+     const pago = D.financeiro && D.financeiro[u] && D.financeiro[u][mesAtual];
+     const hListAluno = hist(u);
+     const ultimoTreino = hListAluno.length ? hListAluno[0] : null;
+     const concluiuHoje = ultimoTreino && ultimoTreino.d === hojeStr;
+
+     if(filtroAlunosStatus === 'pagos' && !pago) return false;
+     if(filtroAlunosStatus === 'pendentes' && pago) return false;
+     if(filtroAlunosStatus === 'hoje' && !concluiuHoje) return false;
+
+     return matchBusca;
+   });
+
+   if(idsFiltrados.length){
+    h+=idsFiltrados.map((u, index)=>{
      const checked = (D.checks||{})[u] ? 'checked' : '';
      const alunoNomeOriginal = D.perfis[u].n;
      const valorMensal = D.perfis[u].valor || 0;
@@ -1718,7 +1878,7 @@ function viewC(){
      const treinosMes = hListAluno.filter(item => item.d && item.d.startsWith(mesAtual)).length;
      const aderenciaPct = Math.min(100, Math.round((treinosMes / metaMes) * 100));
 
-     const hojeStr = new Date().toISOString().slice(0,10);
+     const pago = D.financeiro && D.financeiro[u] && D.financeiro[u][mesAtual];
      const ultimoTreino = hListAluno.length ? hListAluno[0] : null;
      const concluiuHoje = ultimoTreino && ultimoTreino.d === hojeStr;
      const avisoTreinoBadge = concluiuHoje ? `<span class="bd ok" style="background:var(--pri-t); color:var(--pri); border-color:var(--pri)">🔔 Concluiu treino hoje! (${dt(ultimoTreino.d)} · ${esc(ultimoTreino.n)})</span>` : (ultimoTreino ? `<span class="bd" style="color:var(--mu)">Último treino: ${dt(ultimoTreino.d)}</span>` : `<span class="bd warn">Nenhum treino ainda</span>`);
@@ -1732,13 +1892,17 @@ function viewC(){
                '<span class="mu" style="font-weight:700">#'+(index+1)+'</span>'+
                '<h3 style="font-size:1.1rem">'+esc(alunoNomeOriginal)+'</h3>'+
              '</div>'+
-             '<div style="margin-top:4px; font-size:0.85rem; color:var(--pri); font-weight:700">Mensalidade: R$ '+fmt(valorMensal)+'</div>'+
+             '<div style="margin-top:4px; font-size:0.85rem; display:flex; gap:10px; align-items:center">'+
+               '<b style="color:var(--pri)">R$ '+fmt(valorMensal)+'</b>'+
+               '<span class="bd '+(pago?'ok':'warn')+'">'+(pago?'✓ Pago':'⚠️ Pendente')+'</span>'+
+             '</div>'+
              '<div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px">'+
                '<span class="bd ok">📊 Aderência: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+')</span>'+
                avisoTreinoBadge+
              '</div>'+
-             '<div style="margin-top:10px; display:flex; gap:6px">'+
+             '<div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap">'+
                '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link</button>'+
+               '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="duplicarTreinos" data-id="'+esc(u)+'">👥 Copiar Treino</button>'+
                '<button class="btn s t" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="gerarPDF" data-id="'+esc(u)+'">📄 PDF</button>'+
              '</div>'+
            '</div>'+
@@ -1751,7 +1915,7 @@ function viewC(){
      '</div>';
     }).join('');
    } else {
-    h+='<div class="card"><p class="mu">Nenhum aluno cadastrado ainda.</p></div>';
+    h+='<div class="card"><p class="mu">Nenhum aluno encontrado com esses critérios.</p></div>';
    }
  }
 
@@ -2000,6 +2164,29 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
     html2canvas: { scale: 2, useCORS: true },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
   }).save();
+ }
+ else if(c==='duplicarTreinos'){
+  const alunoOrigemId = id;
+  const rotinasOrigem = rts(alunoOrigemId);
+  if(!rotinasOrigem.length){ alert('Este aluno não possui rotinas cadastradas para copiar.'); return; }
+  
+  const alunosIds = Object.keys(D.perfis||{}).filter(x => x !== alunoOrigemId);
+  if(!alunosIds.length){ alert('Não há outros alunos cadastrados para receber os treinos.'); return; }
+  
+  const listaNomes = alunosIds.map(u => `- ${D.perfis[u].n} (ID: ${u})`).join('\n');
+  const alunoDestinoId = prompt('Digite exatamente o ID do aluno destino que receberá as fichas:\n\n' + listaNomes);
+  
+  if(alunoDestinoId && D.perfis[alunoDestinoId]){
+    const novasRotinas = JSON.parse(JSON.stringify(rotinasOrigem));
+    novasRotinas.forEach(r => { r.id = Date.now() + Math.random(); });
+    if(!D.rotinas) D.rotinas = {};
+    D.rotinas[alunoDestinoId] = { rt: novasRotinas };
+    await savePartial('rotinas', alunoDestinoId, D.rotinas[alunoDestinoId]);
+    alert('Fichas copiadas com sucesso para ' + D.perfis[alunoDestinoId].n + '!');
+    view();
+  } else if(alunoDestinoId) {
+    alert('Aluno destino não encontrado.');
+  }
  }
  else if(c==='aplicarTemplateGlobal'){
   const tid = b.dataset.tid;
