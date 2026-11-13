@@ -890,33 +890,6 @@ const BANCO_EXER = [
   { n: "Burpees", m: "Cardio", v: "" }
 ];
 
-function formatPace(minPerKm){
-  if(!minPerKm || !isFinite(minPerKm) || minPerKm <= 0) return '–';
-  const m = Math.floor(minPerKm);
-  const s = Math.round((minPerKm - m) * 60);
-  if(s === 60) return (m + 1) + ':00/km';
-  return m + ':' + String(s).padStart(2, '0') + '/km';
-}
-
-function calcRunningZones(distMeters){
-  const d = parseFloat(distMeters);
-  if(!d || d < 500) return null;
-  const vo2 = (d - 504.9) / 44.73;
-  const vamKmh = (d / 1000) / 0.2;
-  const vamPace = 60 / vamKmh;
-  const zones = [
-    { z: 'Z1', nome: 'Regenerativo', pct: '60% - 70%', minP: vamPace / 0.70, maxP: vamPace / 0.60, desc: 'Trote muito leve, recuperação ativa' },
-    { z: 'Z2', nome: 'Aeróbio Base', pct: '70% - 80%', minP: vamPace / 0.80, maxP: vamPace / 0.70, desc: 'Rodagem confortável, queima de gordura' },
-    { z: 'Z3', nome: 'Ritmo (Tempo)', pct: '80% - 88%', minP: vamPace / 0.88, maxP: vamPace / 0.80, desc: 'Ritmo moderado-forte sustentado' },
-    { z: 'Z4', nome: 'Limiar Anaeróbio', pct: '88% - 95%', minP: vamPace / 0.95, maxP: vamPace / 0.88, desc: 'Ritmo de prova (5k/10k), desconfortável' },
-    { z: 'Z5', nome: 'VO2 Máx (Tiros)', pct: '95% - 105%', minP: vamPace / 1.05, maxP: vamPace / 0.95, desc: 'Intervalados curtos de alta intensidade' }
-  ].map(item => ({
-    ...item,
-    paceRange: formatPace(item.minP) + ' a ' + formatPace(item.maxP)
-  }));
-  return { dist: d, vo2, vamKmh, vamPace: formatPace(vamPace), zones };
-}
-
 let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}, habitos:{}, templates:{}, financeiro:{}};
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -966,7 +939,7 @@ $('seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
    else if(p !== null){ alert('Senha incorreta!'); }
   }
  } else {
-  coachView = false; localStorage.setItem('reis_coach', '0'); open = null; ed = null; edTpl = null; view();
+  coachView = false; localStorage.getItem('reis_coach', '0'); open = null; ed = null; edTpl = null; view();
  }
 });
 
@@ -1043,7 +1016,7 @@ function viewA(){
    return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3>'+(isRun?'🏃 ':'🏋️ ')+esc(r.n)+'</h3>'+(isRun?'<span class="bd run">Corrida</span>':'')+'</div><div class="mu" style="margin-top:4px">'+
    (isRun
      ? r.ex.map(x=>esc(x.e)+' ('+esc(x.dist)+' · '+esc(x.zona)+' · Pace: '+esc(x.paceAlvo||'livre')+')').join(' · ')
-     : r.ex.map(x=>esc(x.e)+' ('+x.s.length+' séries)').join(' · ')
+     : r.ex.map(x=> (x.grupo ? '<span class="bd" style="background:var(--pri-t);color:var(--pri)">'+esc(x.grupo)+'</span> ' : '') + esc(x.e)+' ('+x.s.length+' séries)').join(' · ')
    )+'</div><button class="btn s t" style="margin-top:12px" data-r="'+r.id+'">Iniciar rotina</button></div>';
  }).join(''):'<p class="mu">Seu treinador ainda não montou rotinas para você.</p>');
 
@@ -1071,11 +1044,13 @@ function selecionarMusculoFiltro(musculo){
 
 function renderizarModalBusca(){
   const grupos = ['Todos', 'Peitoral', 'Costas', 'Pernas', 'Glúteos', 'Ombros', 'Bíceps', 'Tríceps', 'Panturrilhas', 'Abdômen', 'Antebraço', 'Cardio'];
-  const termo = ($('filtroExInput') ? $('filtroExInput').value : '').toLowerCase();
+  const termo = ($('filtroExInput') ? $('filtroExInput'.toLowerCase()) : '').toLowerCase();
+  const inputEl = $('filtroExInput');
+  const termoReal = inputEl ? inputEl.value.toLowerCase() : '';
 
   const filtrados = BANCO_EXER.filter(i => {
     const matchGrupo = (filtroMusculoAtual === 'Todos' || i.m === filtroMusculoAtual);
-    const matchTermo = i.n.toLowerCase().includes(termo) || i.m.toLowerCase().includes(termo);
+    const matchTermo = i.n.toLowerCase().includes(termoReal) || i.m.toLowerCase().includes(termoReal);
     return matchGrupo && matchTermo;
   });
 
@@ -1086,7 +1061,7 @@ function renderizarModalBusca(){
         <h3>🔍 Selecionar Exercício</h3>
         <button class="x" onclick="$('modalBuscaEx').hidden=true">✕ Fechar</button>
       </div>
-      <input class="t" id="filtroExInput" placeholder="Digite para filtrar exercício..." style="margin-top:10px" value="${esc(termo)}" oninput="renderizarModalBusca()">
+      <input class="t" id="filtroExInput" placeholder="Digite para filtrar exercício..." style="margin-top:10px" value="${esc(termoReal)}" oninput="renderizarModalBusca()">
       <div class="muscle-chips-container">
         ${grupos.map(g => `<button class="muscle-chip ${filtroMusculoAtual===g?'on':''}" onclick="selecionarMusculoFiltro('${g}')">${g}</button>`).join('')}
       </div>
@@ -1100,9 +1075,9 @@ function renderizarModalBusca(){
       </div>
     </div>
   `;
-  if(termo && $('filtroExInput')){
-    const inputEl = $('filtroExInput');
-    inputEl.selectionStart = inputEl.selectionEnd = inputEl.value.length;
+  if(termoReal && $('filtroExInput')){
+    const el = $('filtroExInput');
+    el.selectionStart = el.selectionEnd = el.value.length;
   }
 }
 
@@ -1234,7 +1209,13 @@ function viewC(){
      
      edTpl.ex.forEach((x, exerIdx)=>{
        h += `<div class="edr">
-         <div style="display:flex; gap:8px; align-items:center">
+         <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px">
+           <select style="max-width:130px; font-size:0.75rem; padding:6px" onchange="edTpl.ex[${exerIdx}].grupo=this.value">
+             <option value="" ${!x.grupo?'selected':''}>Exercício Normal</option>
+             <option value="Bi-set A" ${x.grupo==='Bi-set A'?'selected':''}>Bi-set A</option>
+             <option value="Bi-set B" ${x.grupo==='Bi-set B'?'selected':''}>Bi-set B</option>
+             <option value="Tri-set" ${x.grupo==='Tri-set'?'selected':''}>Tri-set / Super</option>
+           </select>
            <input class="t" id="tplExName_${exerIdx}" value="${esc(x.e)}" placeholder="Nome do exercício" style="flex:1" oninput="edTpl.ex[${exerIdx}].e=this.value">
            <button class="btn s t" style="margin:0; white-space:nowrap" onclick="abrirBuscaExercicios(${exerIdx}, true)">🔍 Buscar</button>
          </div>
@@ -1257,7 +1238,7 @@ function viewC(){
        </div>`;
      });
 
-     h += `<button class="btn g" style="margin-top:10px" onclick="edTpl.ex.push({e:'', v:'', descanso:90, s:[{kg:'',r:'10',rpe:''}]});view()">+ Adicionar Exercício</button>
+     h += `<button class="btn g" style="margin-top:10px" onclick="edTpl.ex.push({e:'', v:'', grupo:'', descanso:90, s:[{kg:'',r:'10',rpe:''}]});view()">+ Adicionar Exercício</button>
        <div style="margin-top:14px; display:flex; gap:8px">
          <button class="btn t" onclick="salvarTemplateEditado()">Salvar Template</button>
          <button class="btn g" onclick="edTpl=null;view()">Cancelar</button>
@@ -1369,7 +1350,13 @@ function viewC(){
      h += ed.ex.map((x,i)=>{
        const exerIdx = i;
        return '<div class="edr">'+
-       '<div style="display:flex; gap:8px; align-items:center">'+
+       '<div style="display:flex; gap:8px; align-items:center; margin-bottom:8px">'+
+       '<select style="max-width:130px; font-size:0.75rem; padding:6px" onchange="ed.ex['+exerIdx+'].grupo=this.value">'+
+       '<option value="" '+(!x.grupo?'selected':''+'>Exercício Normal</option>'+
+       '<option value="Bi-set A" '+(x.grupo==='Bi-set A'?'selected':'')+'>Bi-set A</option>'+
+       '<option value="Bi-set B" '+(x.grupo==='Bi-set B'?'selected':'')+'>Bi-set B</option>'+
+       '<option value="Tri-set" '+(x.grupo==='Tri-set'?'selected':'')+'>Tri-set / Super</option>'+
+       '</select>'+
        '<input class="t" data-ex="'+exerIdx+'" data-f="e" value="'+esc(x.e)+'" placeholder="Nome do exercício" style="flex:1">'+
        '<button class="btn s t" style="margin:0; white-space:nowrap" onclick="abrirBuscaExercicios('+exerIdx+', false)">🔍 Buscar</button>'+
        '</div>'+
@@ -1398,7 +1385,7 @@ function viewC(){
       return '<div class="card"><h3>'+(isRun?'🏃 ':'🏋️ ')+esc(r.n)+'</h3><div class="mu">'+
       (isRun 
         ? r.ex.map(x=>esc(x.e)+' ('+esc(x.dist)+' · '+esc(x.zona)+')').join(' · ')
-        : r.ex.map(x=>esc(x.e)+' ('+x.s.length+' séries)').join(' · ')
+        : r.ex.map(x=> (x.grupo ? '<span class="bd" style="background:var(--pri-t);color:var(--pri)">'+esc(x.grupo)+'</span> ' : '') + esc(x.e)+' ('+x.s.length+' séries)').join(' · ')
       )+'</div><div style="margin-top:10px"><button class="btn s g" data-c="editR" data-id="'+r.id+'">Editar</button><button class="x" data-c="delR" data-id="'+r.id+'">Excluir</button></div></div>';
     }).join('')+
     '<div style="display:flex; gap:8px"><button class="btn t" style="flex:1" data-c="newR">+ Musculação</button><button class="btn g" style="flex:1; border-color:var(--acc); color:var(--acc)" data-c="newRRun">+ Corrida</button></div>'+
@@ -1547,7 +1534,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
    D.templates[tid] = {
      n: nomeT.trim(),
      ex: [
-       { e: "Supino Reto com Barra", v: "https://www.youtube.com/watch?v=rT7DgCr-3pg", descanso: 90, s: [{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''}] }
+       { e: "Supino Reto com Barra", v: "https://www.youtube.com/watch?v=rT7DgCr-3pg", grupo: "", descanso: 90, s: [{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''}] }
      ]
    };
    await save();
@@ -1606,22 +1593,23 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   const novoTipo = b.dataset.tipo;
   if(ed.tipo !== novoTipo){
     ed.tipo = novoTipo;
-    ed.ex = novoTipo === 'corrida' ? [{e:'Aquecimento', dist:'10 min', zona:'Z1'}] : [{e:'', v:'', descanso:90, s:[{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''}]}];
+    ed.ex = novoTipo === 'corrida' ? [{e:'Aquecimento', dist:'10 min', zona:'Z1'}] : [{e:'', v:'', grupo:'', descanso:90, s:[{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''}]}];
   }
  }
- else if(c==='newR') ed={rid:null, tipo:'musculacao', n:'', ex:[{e:'', v:'', descanso:90, s:[{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''}]}]};
+ else if(c==='newR') ed={rid:null, tipo:'musculacao', n:'', ex:[{e:'', v:'', grupo:'', descanso:90, s:[{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''}]}]};
  else if(c==='newRRun') ed={rid:null, tipo:'corrida', n:'', ex:[{e:'Aquecimento', dist:'10 min', zona:'Z1'}]};
  else if(c==='editR'){
   const r=rts(u).find(x=>String(x.id)===id);
   ed={rid:r.id, tipo:r.tipo||'musculacao', n:r.n, ex:r.ex.map(x=>({
     e: x.e,
     v: x.v || '',
+    grupo: x.grupo || '',
     descanso: x.descanso || 90,
     s: x.s ? x.s.map(s=>({kg: s.kg!==undefined?s.kg:'', r: s.r!==undefined?s.r:'', rpe: s.rpe!==undefined?s.rpe:''})) : [{kg:'', r:'10', rpe:''}]
   }))};
  }
  else if(c==='delR') await saveR(rts(u).filter(x=>String(x.id)!==id));
- else if(c==='addE') ed.ex.push({e:'', v:'', descanso:90, s:[{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''}]});
+ else if(c==='addE') ed.ex.push({e:'', v:'', grupo:'', descanso:90, s:[{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''}]});
  else if(c==='addS') ed.ex[b.dataset.ex].s.push({kg:'', r:'10', rpe:''});
  else if(c==='rmS') ed.ex[b.dataset.ex].s.splice(b.dataset.si, 1);
  else if(c==='addERun') ed.ex.push({e:'', dist:'', zona:'Z2'});
@@ -1642,6 +1630,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
     const ex=ed.ex.filter(x=>x.e.trim()).map(x=>({
       e: x.e.trim(),
       v: /^https?:\/\//i.test((x.v||'').trim())?(x.v||'').trim():'',
+      grupo: String(x.grupo||'').trim(),
       descanso: parseInt(x.descanso) || 90,
       s: x.s.map(s=>({
         kg: parseFloat(String(s.kg||0).replace(',','.')) || 0,
