@@ -1560,7 +1560,7 @@ function viewC(){
     <h3 style="font-size:1.15rem; margin:2px 0 10px">Painel de Treinamento</h3>
     <div class="coach-nav-tabs">
       <button class="coach-nav-tab ${coachTab==='inicio'?'on':''}" onclick="setCoachTab('inicio')">🏠 Início</button>
-      <button class="coach-nav-tab ${coachTab==='alunos'?'on':''}" onclick="setCoachTab('alunos')">👥 Alunos</button>
+      <button class="coach-nav-tab ${coachTab==='alunos'?'on':''}" onclick="setCoachTab('alunos')">👥 Alunos (${totalAlunos})</button>
       <button class="coach-nav-tab ${coachTab==='treinos'?'on':''}" onclick="setCoachTab('treinos')">🏋️ Treinos</button>
       <button class="coach-nav-tab ${coachTab==='financeiro'?'on':''}" onclick="setCoachTab('financeiro')">💳 Financeiro</button>
     </div>
@@ -1697,12 +1697,14 @@ function viewC(){
 
  if(coachTab === 'alunos' || coachTab === 'inicio' || coachTab === 'treinos'){
    h += `
-    <h2>Painel Geral de Alunos</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h2 style="margin:0">👥 Lista de Alunos (${totalAlunos})</h2>
+    </div>
     <button class="btn t" style="margin-bottom:16px" data-c="novoAluno">+ Adicionar Novo Aluno</button>
    `;
 
    if(ids.length){
-    h+=ids.map(u=>{
+    h+=ids.map((u, index)=>{
      const checked = (D.checks||{})[u] ? 'checked' : '';
      const alunoNomeOriginal = D.perfis[u].n;
      const valorMensal = D.perfis[u].valor || 0;
@@ -1712,12 +1714,42 @@ function viewC(){
      const anamU = D.anamnese && D.anamnese[u];
      const metaDiasSemana = anamU && parseInt(anamU.dias) ? parseInt(anamU.dias) : 3;
      const metaMes = metaDiasSemana * 4;
-     const treinosMes = hist(u).filter(item => item.d && item.d.startsWith(mesAtual)).length;
+     const hListAluno = hist(u);
+     const treinosMes = hListAluno.filter(item => item.d && item.d.startsWith(mesAtual)).length;
      const aderenciaPct = Math.min(100, Math.round((treinosMes / metaMes) * 100));
 
-     return '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'+
-     '<div style="display:flex;align-items:center;gap:10px"><input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" '+checked+' style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer"><div><h3>'+esc(alunoNomeOriginal)+' <span style="font-size:0.85rem; color:var(--pri); font-weight:700">· R$ '+fmt(valorMensal)+'</span></h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)</div><div style="margin-top:2px"><span class="bd ok" style="margin:2px 0">📊 Aderência: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+')</span></div><div style="margin-top:6px; display:flex; gap:6px"><button class="btn s g" style="padding:6px 10px;font-size:.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link</button><button class="btn s t" style="padding:6px 10px;font-size:.75rem; margin:0" data-c="gerarPDF" data-id="'+esc(u)+'">📄 PDF</button></div></div></div>'+
-     '<div><button class="btn s" data-c="open" data-id="'+esc(u)+'">Abrir</button><button class="x" data-c="delAluno" data-id="'+esc(u)+'" style="color:var(--danger)">Excluir</button></div></div></div>';
+     // Verificar se concluiu treino recentemente (ex: hoje)
+     const hojeStr = new Date().toISOString().slice(0,10);
+     const ultimoTreino = hListAluno.length ? hListAluno[0] : null;
+     const concluiuHoje = ultimoTreino && ultimoTreino.d === hojeStr;
+     const avisoTreinoBadge = concluiuHoje ? `<span class="bd ok" style="background:var(--pri-t); color:var(--pri); border-color:var(--pri)">🔔 Concluiu treino hoje! (${dt(ultimoTreino.d)} · ${esc(ultimoTreino.n)})</span>` : (ultimoTreino ? `<span class="bd" style="color:var(--mu)">Último treino: ${dt(ultimoTreino.d)}</span>` : `<span class="bd warn">Nenhum treino ainda</span>`);
+
+     return '<div class="card" style="border-left: 3px solid '+(concluiuHoje?'var(--pri)':'var(--ln2)')+'">'+
+       '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px">'+
+         '<div style="display:flex; gap:10px; align-items:flex-start">'+
+           '<input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" '+checked+' style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer; margin-top:2px">'+
+           '<div>'+
+             '<div style="display:flex; align-items:center; gap:8px">'+
+               '<span class="mu" style="font-weight:700">#${index+1}</span>'+
+               '<h3 style="font-size:1.1rem">${esc(alunoNomeOriginal)}</h3>'+
+             '</div>'+
+             '<div style="margin-top:4px; font-size:0.85rem; color:var(--pri); font-weight:700">Mensalidade: R$ '+fmt(valorMensal)+'</div>'+
+             '<div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px">'+
+               '<span class="bd ok">📊 Aderência: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+')</span>'+
+               avisoTreinoBadge+
+             '</div>'+
+             '<div style="margin-top:10px; display:flex; gap:6px">'+
+               '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link</button>'+
+               '<button class="btn s t" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="gerarPDF" data-id="'+esc(u)+'">📄 PDF</button>'+
+             '</div>'+
+           '</div>'+
+         '</div>'+
+         '<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">'+
+           '<button class="btn s" style="margin:0" data-c="open" data-id="'+esc(u)+'">Abrir Aluno</button>'+
+           '<button class="x" data-c="delAluno" data-id="'+esc(u)+'" style="color:var(--danger)">Excluir</button>'+
+         '</div>'+
+       '</div>'+
+     '</div>';
     }).join('');
    } else {
     h+='<div class="card"><p class="mu">Nenhum aluno cadastrado ainda.</p></div>';
