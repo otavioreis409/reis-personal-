@@ -14,34 +14,34 @@
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 <style>
 :root{
-  --bg:#0D0D0F;
-  --bg2:#161618;
-  --card:#1E1E20;
-  --elev:#262629;
-  --pill:#2C2C2E;
-  --tx:#FFFFFF;
-  --mu:#9E9EA4;
-  --mu2:#6E6E73;
-  --ln:#2A2A2D;
-  --ln2:#36363A;
+  --bg:#09090B;
+  --bg2:#121215;
+  --card:linear-gradient(145deg, #18181B 0%, #111114 100%);
+  --elev:#202024;
+  --pill:#27272A;
+  --tx:#FAFAFA;
+  --mu:#A1A1AA;
+  --mu2:#71717A;
+  --ln:#27272A;
+  --ln2:#3F3F46;
   --pri:#FFD000;
-  --on-pri:#0D0D0F;
-  --pri-t:rgba(255,208,0,.14);
-  --btn-w:#FFFFFF;
-  --on-btn-w:#0D0D0F;
+  --on-pri:#09090B;
+  --pri-t:rgba(255,208,0,.12);
+  --btn-w:#FAFAFA;
+  --on-btn-w:#09090B;
   --acc:#3B82F6;
-  --acc-t:rgba(59,130,246,.14);
-  --ok:#30D158;
-  --on-ok:#0D0D0F;
-  --ok-t:rgba(48,209,88,.14);
-  --wn-bg:rgba(255,208,0,.16);
-  --wn-tx:#FFD000;
-  --danger:#FF453A;
-  --danger-t:rgba(255,69,58,.14);
+  --acc-t:rgba(59,130,246,.12);
+  --ok:#22C55E;
+  --on-ok:#09090B;
+  --ok-t:rgba(34,197,94,.12);
+  --wn-bg:rgba(234,179,8,.12);
+  --wn-tx:#EAB308;
+  --danger:#EF4444;
+  --danger-t:rgba(239,68,68,.12);
   --ta:#FFD000;
-  --tf:#FF453A;
-  --sh:0 4px 20px rgba(0,0,0,.35);
-  --sh-float:0 10px 30px rgba(0,0,0,.7);
+  --tf:#EF4444;
+  --sh:0 8px 30px rgba(0,0,0,.45);
+  --sh-float:0 14px 40px rgba(0,0,0,.8);
   --fh:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;
   color-scheme: dark;
   box-sizing:border-box;
@@ -63,21 +63,21 @@ body{
 .top{
   position:sticky;
   top:env(safe-area-inset-top,0px);
-  background:rgba(13,13,15,.88);
-  backdrop-filter:blur(16px);
-  -webkit-backdrop-filter:blur(16px);
+  background:rgba(9,9,11,.88);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
   padding:14px 24px 12px;
   border-bottom:1px solid var(--ln);
   z-index:5;
 }
 .r{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.top h1{margin:0;font-size:1.25rem;font-weight:800;letter-spacing:-.02em}
+.top h1{margin:0;font-size:1.25rem;font-weight:800;letter-spacing:-.03em}
 .top h1 span{color:var(--pri)}
 #who{margin-top:4px;font-size:.8rem;color:var(--mu)}
 
 .seg{
   display:flex;
-  background:var(--card);
+  background:var(--bg2);
   border:1px solid var(--ln);
   border-radius:9999px;
   padding:3px;
@@ -93,7 +93,7 @@ body{
   border-radius:9999px;
   cursor:pointer;
   font-family:inherit;
-  transition:all .15s ease;
+  transition:all .2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .seg button.on{background:var(--pri);color:var(--on-pri);font-weight:700}
 
@@ -103,17 +103,20 @@ body.is-coach main{max-width:none!important;width:100%!important;padding:16px 16
   body.is-coach main{padding:24px 32px;}
 }
 
-h2{font-size:1.15rem;font-weight:700;margin:24px 0 12px;letter-spacing:-.01em}
+h2{font-size:1.15rem;font-weight:700;margin:24px 0 12px;letter-spacing:-.02em}
 h2:first-child{margin-top:0}
 
 .card{
   background:var(--card);
   border:1px solid var(--ln);
-  border-radius:20px;
-  padding:16px;
-  margin-bottom:12px;
+  border-radius:24px;
+  padding:18px;
+  margin-bottom:14px;
   box-shadow:var(--sh);
-  transition:transform .15s ease;
+  transition:transform .2s cubic-bezier(0.4, 0, 0.2, 1), border-color .2s;
+}
+.card:hover{
+  border-color:var(--ln2);
 }
 .card h3{margin:0;font-size:1.05rem;font-weight:700;letter-spacing:-.01em}
 .mu{color:var(--mu);font-size:.82rem}
@@ -131,19 +134,20 @@ h2:first-child{margin-top:0}
   cursor:pointer;
   background:var(--btn-w);
   color:var(--on-btn-w);
-  transition:transform .08s,opacity .15s;
+  transition:transform .1s cubic-bezier(0.4, 0, 0.2, 1), opacity .15s;
 }
 .btn:hover{opacity:.92}
-.btn:active{transform:scale(.98)}
+.btn:active{transform:scale(.97)}
 .btn.g{
   background:var(--pill);
   color:var(--tx);
   border:1px solid var(--ln2);
-  border-radius:12px;
+  border-radius:14px;
 }
 .btn.t{
   background:var(--pri);
   color:var(--on-pri);
+  box-shadow:0 4px 16px rgba(255,208,0,.25);
 }
 .btn.s{
   display:inline-flex;
@@ -162,9 +166,9 @@ h2:first-child{margin-top:0}
   left:0;
   right:0;
   display:flex;
-  background:rgba(22,22,24,.94);
-  backdrop-filter:blur(16px);
-  -webkit-backdrop-filter:blur(16px);
+  background:rgba(18,18,21,.92);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
   border-top:1px solid var(--ln);
   padding-bottom:env(safe-area-inset-bottom,0px);
   z-index:6;
@@ -196,9 +200,9 @@ h2:first-child{margin-top:0}
 .wt{
   position:sticky;
   top:0;
-  background:rgba(13,13,15,.92);
-  backdrop-filter:blur(14px);
-  -webkit-backdrop-filter:blur(14px);
+  background:rgba(9,9,11,.92);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
   padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;
   border-bottom:1px solid var(--ln);
   display:flex;
@@ -209,7 +213,7 @@ h2:first-child{margin-top:0}
 .wt-title{
   font-size:1.65rem;
   font-weight:800;
-  letter-spacing:-.02em;
+  letter-spacing:-.03em;
   margin:14px 0 2px;
 }
 .wt-timer{
@@ -217,9 +221,9 @@ h2:first-child{margin-top:0}
   font-weight:700;
   font-size:.95rem;
   color:var(--tx);
-  background:var(--card);
+  background:var(--bg2);
   border:1px solid var(--ln);
-  padding:6px 12px;
+  padding:6px 14px;
   border-radius:9999px;
 }
 
@@ -256,7 +260,7 @@ th{
   font-size:.65rem;
   color:var(--mu2);
   text-transform:uppercase;
-  letter-spacing:.04em;
+  letter-spacing:.05em;
   font-weight:700;
   text-align:center;
   padding:0 2px 2px;
@@ -271,7 +275,7 @@ td input{
   padding:4px 4px;
   border:1px solid transparent;
   border-radius:10px;
-  background:var(--pill);
+  background:var(--bg2);
   color:var(--tx);
   font-size:.9rem;
   font-weight:700;
@@ -283,7 +287,7 @@ td input:focus{border-color:var(--pri);background:var(--elev);outline:none}
 td input::placeholder{color:var(--mu2);font-weight:600}
 
 td input.readonly-presc {
-  background: var(--bg2);
+  background: var(--bg);
   color: var(--mu);
   border: 1px dashed var(--ln2);
   font-weight: 600;
@@ -319,13 +323,13 @@ td input.readonly-presc {
   transition:all .2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .ck:active{
-  transform:scale(0.88);
+  transform:scale(0.85);
 }
 tr.d .ck{
   background:var(--ok);
   border-color:var(--ok);
   color:var(--on-ok);
-  box-shadow:0 0 12px rgba(48,209,88,0.4);
+  box-shadow:0 0 14px rgba(34,197,94,0.4);
 }
 tr.d .ty{
   background:var(--ok-t);
@@ -368,8 +372,8 @@ input.t,select,textarea.t{
   padding:12px 14px;
   min-height:46px;
   border:1px solid var(--ln);
-  border-radius:12px;
-  background:var(--pill);
+  border-radius:14px;
+  background:var(--bg2);
   color:var(--tx);
   font-size:.95rem;
   font-family:inherit;
@@ -377,7 +381,7 @@ input.t,select,textarea.t{
 }
 input.t:focus,select:focus,textarea.t:focus{border-color:var(--pri);outline:none}
 select option {
-  background-color: var(--card);
+  background-color: var(--bg2);
   color: var(--tx);
 }
 .edr{border-top:1px solid var(--ln);padding-top:14px;margin-top:14px}
@@ -386,8 +390,8 @@ select option {
 .cm{
   background:var(--pri-t);
   border-left:3px solid var(--pri);
-  border-radius:10px;
-  padding:10px 12px;
+  border-radius:12px;
+  padding:12px 14px;
   margin-top:10px;
   font-size:.88rem;
   color:var(--tx);
@@ -396,21 +400,20 @@ select option {
 .st div{
   background:var(--card);
   border:1px solid var(--ln);
-  border-radius:16px;
-  padding:14px 8px;
+  border-radius:20px;
+  padding:16px 8px;
   text-align:center;
   box-shadow:var(--sh);
 }
 .st b{
   display:block;
   color:var(--pri);
-  font-size:1.2rem;
+  font-size:1.25rem;
   font-weight:800;
   font-variant-numeric:tabular-nums;
   margin-bottom:2px;
 }
 svg{width:100%;height:auto}[hidden]{display:none!important}
-#msg{display:none}
 
 .bd{
   display:inline-block;
@@ -418,7 +421,7 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   font-weight:600;
   border:1px solid var(--ln);
   border-radius:8px;
-  padding:4px 9px;
+  padding:4px 10px;
   background:var(--pill);
   color:var(--tx);
 }
@@ -434,12 +437,12 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   cursor: pointer;
 }
 .hist-details {
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px solid var(--ln);
   font-size: 0.85rem;
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 /* Banner PR */
@@ -467,7 +470,7 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.85);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
   z-index: 100;
   display: flex;
   justify-content: center;
@@ -475,15 +478,15 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   padding: 16px;
 }
 .modal-box {
-  background: var(--card);
-  border: 1px solid var(--ln);
-  border-radius: 20px;
+  background: var(--bg2);
+  border: 1px solid var(--ln2);
+  border-radius: 24px;
   width: 100%;
   max-width: 560px;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 24px;
   box-shadow: var(--sh-float);
   overflow-y: auto;
 }
@@ -524,7 +527,7 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
 .ex-item-card {
   background: var(--pill);
   border: 1px solid var(--ln2);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 12px;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
@@ -538,7 +541,7 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
 .coach-dash-header {
   background: var(--card);
   border: 1px solid var(--ln);
-  border-radius: 16px;
+  border-radius: 20px;
   padding: 20px 24px;
   margin-bottom: 20px;
   width: 100%;
@@ -551,7 +554,7 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   margin-top: 12px;
 }
 .coach-nav-tab {
-  background: var(--pill);
+  background: var(--bg2);
   border: 1px solid var(--ln2);
   color: var(--mu);
   padding: 10px 18px;
@@ -583,7 +586,7 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
 .kpi-card {
   background: var(--card);
   border: 1px solid var(--ln);
-  border-radius: 16px;
+  border-radius: 20px;
   padding: 20px;
   box-shadow: var(--sh);
 }
@@ -634,6 +637,14 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   </div>
  </section>
  <section id="v0" hidden>
+  <!-- Card de Aviso Rápido ao Coach -->
+  <div class="card" style="border-left: 3px solid var(--pri); margin-bottom: 20px;">
+    <h3 style="color:var(--pri)">💬 Falar com o Coach (Aviso Rápido)</h3>
+    <p class="mu" style="margin-top:4px">Sentiu alguma dor, quer ajustar algo ou tem dúvida? Mande direto para o painel do seu treinador.</p>
+    <textarea class="t" id="msgAlunoCoachInput" rows="2" style="margin-top:10px" placeholder="Ex: Senti o ombro esquerdo estalar um pouco no supino hoje..."></textarea>
+    <button class="btn s t" style="margin-top:10px; width:100%" data-msg-coach="salvar">Enviar Aviso ao Treinador</button>
+  </div>
+
   <h2>Meus treinos</h2>
   <div id="rt"></div>
 
@@ -733,7 +744,7 @@ const BANCO_EXER_PADRAO = [
 
 let BANCO_EXER = JSON.parse(localStorage.getItem('reis_banco_exer')) || BANCO_EXER_PADRAO;
 
-let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}, habitos:{}, cooper:{}, cooperHabilitado:{}, templates:{}, financeiro:{}};
+let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}, habitos:{}, cooper:{}, cooperHabilitado:{}, templates:{}, financeiro:{}, avisosCoach:{}};
 let isLoaded = false; 
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -793,7 +804,8 @@ async function loadFromCloud(){
         cooper: { ...cloudData.cooper, ...(D.cooper || {}) },
         cooperHabilitado: { ...cloudData.cooperHabilitado, ...(D.cooperHabilitado || {}) },
         templates: { ...cloudData.templates, ...(D.templates || {}) },
-        financeiro: { ...cloudData.financeiro, ...(D.financeiro || {}) }
+        financeiro: { ...cloudData.financeiro, ...(D.financeiro || {}) },
+        avisosCoach: { ...cloudData.avisosCoach, ...(D.avisosCoach || {}) }
       };
       
       if(cloudData.perfis) {
@@ -1007,8 +1019,8 @@ function viewA(){
 }
 
 document.addEventListener('click', async e => {
-  const b = e.target.closest('[data-hab]');
-  if(b && b.dataset.hab === 'salvar'){
+  const bHab = e.target.closest('[data-hab]');
+  if(bHab && bHab.dataset.hab === 'salvar'){
     const agua = parseFloat($('habAgua').value) || 0;
     const sono = parseFloat($('habSono').value) || 0;
     const hojeIso = new Date().toISOString().slice(0,10);
@@ -1017,6 +1029,21 @@ document.addEventListener('click', async e => {
     D.habitos[me][hojeIso] = { agua, sono };
     await savePartial('habitos', me, D.habitos[me]);
     alert('Hábitos salvos com sucesso!');
+  }
+
+  const bMsgCoach = e.target.closest('[data-msg-coach]');
+  if(bMsgCoach && bMsgCoach.dataset.msgCoach === 'salvar'){
+    const textoMsg = $('msgAlunoCoachInput').value.trim();
+    if(!textoMsg){ alert('Escreva uma mensagem antes de enviar.'); return; }
+    if(!D.avisosCoach) D.avisosCoach = {};
+    D.avisosCoach[me] = {
+      texto: textoMsg,
+      data: Date.now(),
+      lido: false
+    };
+    await savePartial('avisosCoach', me, D.avisosCoach[me]);
+    $('msgAlunoCoachInput').value = '';
+    alert('Aviso enviado com sucesso para o seu treinador!');
   }
 
   const btnCooper = e.target.closest('[data-cooper]');
@@ -1059,7 +1086,7 @@ function renderZonasCooperAluno(){
   if(!paces) return;
 
   container.innerHTML = `
-    <div style="background:var(--pill); padding:10px; border-radius:10px; font-size:0.85rem; display:grid; gap:4px">
+    <div style="background:var(--bg2); padding:10px; border-radius:12px; font-size:0.85rem; display:grid; gap:4px">
       <div><b>📅 Último Teste (${dt(paces.dataUltimo)}):</b> ${paces.distUltimo} metros</div>
       <div style="margin-top:4px; border-top:1px solid var(--ln); padding-top:4px"><b>⚡ Ritmos Ideais por Zona (Baseado no Cooper):</b></div>
       <div class="mu">• <b>Z1 (Regenerativo):</b> ${paces.Z1}</div>
@@ -1089,7 +1116,7 @@ function renderProgressoCooperAluno(){
   if(list.length){
     let html = '<h4 style="margin:0 0 10px">Histórico de Testes de Cooper</h4><div style="display:grid; gap:8px">';
     list.forEach(t => {
-      html += `<div style="display:flex; justify-content:space-between; align-items:center; background:var(--pill); padding:8px 12px; border-radius:8px"><span>📅 ${dt(t.d)} — <b>${t.dist} m</b></span><b style="color:var(--pri)">VO2: ${fmt(t.vo2)}</b></div>`;
+      html += `<div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg2); padding:10px 14px; border-radius:12px"><span>📅 ${dt(t.d)} — <b>${t.dist} m</b></span><b style="color:var(--pri)">VO2: ${fmt(t.vo2)}</b></div>`;
     });
     html += '</div>';
     card.innerHTML = html;
@@ -1144,7 +1171,7 @@ function renderProgressoAluno(){
   if(pontos.length){
     chartHtml += '<div style="display:grid; gap:8px">';
     pontos.forEach(p => {
-      chartHtml += '<div style="display:flex; justify-content:space-between; align-items:center; background:var(--pill); padding:8px 12px; border-radius:8px"><span>📅 ' + p.d + '</span><b style="color:var(--pri)">' + fmt(p.kg) + ' kg</b></div>';
+      chartHtml += '<div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg2); padding:10px 14px; border-radius:12px"><span>📅 ' + p.d + '</span><b style="color:var(--pri)">' + fmt(p.kg) + ' kg</b></div>';
     });
     chartHtml += '</div>';
   } else {
@@ -1303,7 +1330,7 @@ function renderW(){
     h += `<div style="margin-bottom:12px"><button class="btn g" style="width:100%; font-size:0.85rem; padding:10px" onclick="abrirRpeInfo()">ℹ️ O que é o RPE? (Clique para entender)</button></div>`;
 
     w.ex.forEach((x, xi)=>{
-      const grupoBadge = x.grupo ? `<div style="background:var(--pri-t); border-left:3px solid var(--pri); padding:8px 12px; border-radius:8px; margin-bottom:8px; font-size:0.82rem; font-weight:700; color:var(--pri)">⚡ ${esc(x.grupo)}: Faça este exercício logo após o anterior (sem descanso entre eles)!</div>` : '';
+      const grupoBadge = x.grupo ? `<div style="background:var(--pri-t); border-left:3px solid var(--pri); padding:8px 12px; border-radius:10px; margin-bottom:8px; font-size:0.82rem; font-weight:700; color:var(--pri)">⚡ ${esc(x.grupo)}: Faça este exercício logo após o anterior (sem descanso entre eles)!</div>` : '';
       const descansoSeg = parseInt(x.descanso) || 90;
 
       h += `${grupoBadge}
@@ -1574,6 +1601,14 @@ async function toggleCooperAluno(u, status){
   view();
 }
 
+async function limparAvisoCoach(u){
+  if(D.avisosCoach && D.avisosCoach[u]){
+    delete D.avisosCoach[u];
+    await savePartial('avisosCoach', u, null);
+    viewC();
+  }
+}
+
 function exportarDadosCSV(){
   let csvContent = "data:text/csv;charset=utf-8,ID_Aluno;Nome;Valor_Mensalidade;Total_Treinos_Historico\n";
   const ids = Object.keys(D.perfis || {});
@@ -1604,7 +1639,7 @@ function abrirModalAplicarTemplate(tid){
       <h3 style="color:var(--pri); margin-bottom:6px">📥 Aplicar Template: ${esc(tpl.n)}</h3>
       <p class="mu" style="margin-bottom:12px">Selecione abaixo quais alunos devem receber esta rotina de treino:</p>
       
-      <div style="display:grid; gap:8px; max-height: 250px; overflow-y: auto; margin-bottom: 16px; background:var(--pill); padding:10px; border-radius:12px">
+      <div style="display:grid; gap:8px; max-height: 250px; overflow-y: auto; margin-bottom: 16px; background:var(--bg2); padding:10px; border-radius:14px">
         ${ids.map(u => `
           <label style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:6px; font-weight:600">
             <input type="checkbox" class="chk-aluno-tpl" value="${u}" style="width:18px; height:18px; accent-color:var(--pri)">
@@ -1884,11 +1919,22 @@ function viewC(){
        const concluiuHoje = ultimoTreino && ultimoTreino.d === hojeStr;
        const avisoTreinoBadge = concluiuHoje ? `<span class="bd ok" style="background:var(--pri-t); color:var(--pri); border-color:var(--pri)">🔔 Concluiu treino hoje! (${dt(ultimoTreino.d)} · ${esc(ultimoTreino.n)})</span>` : (ultimoTreino ? `<span class="bd" style="color:var(--mu)">Último treino: ${dt(ultimoTreino.d)}</span>` : `<span class="bd warn">Nenhum treino ainda</span>`);
 
-       return '<div class="card" style="border-left: 3px solid '+(concluiuHoje?'var(--pri)':'var(--ln2)')+'">'+
+       const avisoCoachObj = D.avisosCoach && D.avisosCoach[u];
+       const avisoCoachHtml = avisoCoachObj ? `
+         <div style="background:var(--pri-t); border:1px solid var(--pri); padding:8px 12px; border-radius:12px; margin-top:8px; display:flex; justify-content:space-between; align-items:center">
+           <div>
+             <b style="color:var(--pri); font-size:0.8rem">💬 Aviso do Aluno:</b>
+             <div style="font-size:0.85rem; color:var(--tx)">${esc(avisoCoachObj.texto)}</div>
+           </div>
+           <button class="btn s g" style="padding:4px 8px; font-size:0.7rem; margin:0" onclick="limparAvisoCoach('${u}')">Marcar Lido</button>
+         </div>
+       ` : '';
+
+       return '<div class="card" style="border-left: 3px solid '+(avisoCoachObj?'var(--pri)':(concluiuHoje?'var(--pri)':'var(--ln2)'))+'">'+
          '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px">'+
-           '<div style="display:flex; gap:10px; align-items:flex-start">'+
+           '<div style="display:flex; gap:10px; align-items:flex-start; width: 100%">'+
              '<input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" checked style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer; margin-top:2px" title="Marcar como Feito">'+
-             '<div>'+
+             '<div style="width: 100%">'+
                '<div style="display:flex; align-items:center; gap:8px">'+
                  '<span class="mu" style="font-weight:700">#'+(index+1)+'</span>'+
                  '<h3 style="font-size:1.1rem">'+esc(alunoNomeOriginal)+'</h3>'+
@@ -1901,6 +1947,7 @@ function viewC(){
                  '<span class="bd ok">📊 Aderência: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+')</span>'+
                  avisoTreinoBadge+
                '</div>'+
+               avisoCoachHtml+
                '<div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap">'+
                  '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link</button>'+
                  '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="duplicarTreinos" data-id="'+esc(u)+'">👥 Copiar Treino</button>'+
@@ -1939,11 +1986,22 @@ function viewC(){
        const concluiuHoje = ultimoTreino && ultimoTreino.d === hojeStr;
        const avisoTreinoBadge = concluiuHoje ? `<span class="bd ok" style="background:var(--pri-t); color:var(--pri); border-color:var(--pri)">🔔 Concluiu treino hoje! (${dt(ultimoTreino.d)} · ${esc(ultimoTreino.n)})</span>` : (ultimoTreino ? `<span class="bd" style="color:var(--mu)">Último treino: ${dt(ultimoTreino.d)}</span>` : `<span class="bd warn">Nenhum treino ainda</span>`);
 
-       return '<div class="card" style="border-left: 3px solid '+(concluiuHoje?'var(--pri)':'var(--ln2)')+'">'+
+       const avisoCoachObj = D.avisosCoach && D.avisosCoach[u];
+       const avisoCoachHtml = avisoCoachObj ? `
+         <div style="background:var(--pri-t); border:1px solid var(--pri); padding:8px 12px; border-radius:12px; margin-top:8px; display:flex; justify-content:space-between; align-items:center">
+           <div>
+             <b style="color:var(--pri); font-size:0.8rem">💬 Aviso do Aluno:</b>
+             <div style="font-size:0.85rem; color:var(--tx)">${esc(avisoCoachObj.texto)}</div>
+           </div>
+           <button class="btn s g" style="padding:4px 8px; font-size:0.7rem; margin:0" onclick="limparAvisoCoach('${u}')">Marcar Lido</button>
+         </div>
+       ` : '';
+
+       return '<div class="card" style="border-left: 3px solid '+(avisoCoachObj?'var(--pri)':(concluiuHoje?'var(--pri)':'var(--ln2)'))+'">'+
          '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px">'+
-           '<div style="display:flex; gap:10px; align-items:flex-start">'+
+           '<div style="display:flex; gap:10px; align-items:flex-start; width: 100%">'+
              '<input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer; margin-top:2px" title="Marcar como Feito">'+
-             '<div>'+
+             '<div style="width: 100%">'+
                '<div style="display:flex; align-items:center; gap:8px">'+
                  '<span class="mu" style="font-weight:700">#'+(index+1)+'</span>'+
                  '<h3 style="font-size:1.1rem">'+esc(alunoNomeOriginal)+'</h3>'+
@@ -1956,6 +2014,7 @@ function viewC(){
                  '<span class="bd ok">📊 Aderência: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+')</span>'+
                  avisoTreinoBadge+
                '</div>'+
+               avisoCoachHtml+
                '<div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap">'+
                  '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link</button>'+
                  '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="duplicarTreinos" data-id="'+esc(u)+'">👥 Copiar Treino</button>'+
@@ -2054,7 +2113,7 @@ function viewC(){
    
    if(isRunEd){
      if(pacesCoach){
-       h += `<div style="background:var(--pill); padding:10px; border-radius:8px; margin-bottom:10px; font-size:0.82rem">
+       h += `<div style="background:var(--bg2); padding:10px; border-radius:12px; margin-bottom:10px; font-size:0.82rem">
          <b>⚡ Referência de Pace do Aluno:</b><br>
          Z1: ${pacesCoach.Z1} | Z2: ${pacesCoach.Z2} | Z3: ${pacesCoach.Z3} | Z4: ${pacesCoach.Z4} | Z5: ${pacesCoach.Z5}
        </div>`;
@@ -2329,6 +2388,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
    if(D.cooper) delete D.cooper[id];
    if(D.cooperHabilitado) delete D.cooperHabilitado[id];
    if(D.financeiro) delete D.financeiro[id];
+   if(D.avisosCoach) delete D.avisosCoach[id];
    await save();
    open=null;
    view();
