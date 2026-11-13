@@ -791,7 +791,6 @@ const BANCO_EXER_PADRAO = [
   { n: "Pular Corda", m: "Cardio", v: "" }
 ];
 
-// Carregar banco personalizado salvo no navegador se existir
 let BANCO_EXER = JSON.parse(localStorage.getItem('reis_banco_exer')) || BANCO_EXER_PADRAO;
 
 let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}, habitos:{}, cooper:{}, templates:{}, financeiro:{}};
@@ -1395,8 +1394,8 @@ function selecionarMusculoFiltro(musculo){
   renderizarModalBusca();
 }
 
-function abrirModalCadastrarNovoExercicio(){
-  const nomeEx = prompt('Nome do novo exercício (ex: Supino Inclinado com Halteres):');
+function cadastrarExercicioDireto(nomeSugerido = ''){
+  const nomeEx = prompt('Nome do novo exercício:', nomeSugerido);
   if(!nomeEx || !nomeEx.trim()) return;
   const grupoEx = prompt('Grupo muscular principal (ex: Peitoral, Costas, Pernas, Ombros, Bíceps, Tríceps, Panturrilhas, Abdômen, Cardio):', 'Peitoral');
   const videoEx = prompt('Link do vídeo de execução no YouTube (opcional):', '');
@@ -1409,8 +1408,10 @@ function abrirModalCadastrarNovoExercicio(){
 
   BANCO_EXER.push(novoItem);
   localStorage.setItem('reis_banco_exer', JSON.stringify(BANCO_EXER));
-  alert('Exercício cadastrado com sucesso na sua biblioteca!');
-  renderizarModalBusca();
+  alert('Exercício "' + novoItem.n + '" cadastrado com sucesso na biblioteca!');
+  if($('modalBuscaEx').hidden === false) {
+    renderizarModalBusca();
+  }
 }
 
 function renderizarModalBusca(){
@@ -1432,7 +1433,7 @@ function renderizarModalBusca(){
         <button class="x" onclick="$('modalBuscaEx').hidden=true">✕ Fechar</button>
       </div>
       <div style="margin-top:10px">
-        <button class="btn s t" style="width:100%; margin-bottom:10px" onclick="abrirModalCadastrarNovoExercicio()">+ Adicionar Novo Exercício à Biblioteca</button>
+        <button class="btn s t" style="width:100%; margin-bottom:10px" onclick="cadastrarExercicioDireto('${esc(termoReal)}')">+ Adicionar "${esc(termoReal || 'Novo Exercício')}" à Biblioteca</button>
       </div>
       <input class="t" id="filtroExInput" placeholder="Digite para filtrar exercício..." value="${esc(termoReal)}" oninput="renderizarModalBusca()">
       <div class="muscle-chips-container">
@@ -1444,7 +1445,7 @@ function renderizarModalBusca(){
             <b>${esc(item.n)}</b>
             <div class="mu">Grupo: ${esc(item.m)}</div>
           </div>
-        `).join('') : '<p class="mu" style="text-align:center; padding:20px;">Nenhum exercício encontrado.</p>'}
+        `).join('') : '<p class="mu" style="text-align:center; padding:20px;">Nenhum exercício encontrado. Clique no botão acima para adicioná-lo!</p>'}
       </div>
     </div>
   `;
