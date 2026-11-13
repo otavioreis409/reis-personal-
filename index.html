@@ -416,6 +416,22 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
 .bd.ok{background:var(--ok-t);color:var(--ok);border-color:transparent}
 .bd.run{background:var(--acc-t);color:var(--acc);border-color:transparent}
 
+/* Histórico Compacto & Acordeão */
+.hist-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+.hist-details {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ln);
+  font-size: 0.85rem;
+  display: grid;
+  gap: 6px;
+}
+
 /* Banner PR */
 #prBanner {
   position: fixed;
@@ -434,6 +450,19 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
 }
 #prBanner.show {
   transform: translateX(-50%) translateY(0);
+}
+
+/* Modal explicativo do RPE */
+#modalRpeInfo {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
 }
 
 /* Modal de Busca de Exercícios por Grupo Muscular */
@@ -625,6 +654,7 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
 </main>
 <div class="tabs" id="tabs"><button data-v="0"><b>🏋️</b>Treino</button><button data-v="1"><b>🗓️</b>Histórico</button><button data-v="2"><b>📈</b>Progresso</button></div>
 <div id="w" hidden></div>
+<div id="modalRpeInfo" hidden></div>
 <div id="modalBuscaEx" hidden></div>
 <datalist id="exl"></datalist>
 <script>
@@ -958,19 +988,32 @@ function histHTML(h,o){return h.length?h.map(w=>{
   const isRun = w.tipo === 'corrida';
   const vol = isRun ? 0 : w.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*(s.rf||s.r||0),0),0);
   const cm=(o.cm||{})[w.id];
-  return '<div class="card"><h3>'+(isRun?'🏃 ':'🏋️ ')+esc(w.n)+'</h3><div class="mu">'+dt(w.d)+' · '+mmss(w.dur)+(isRun?'':' · volume '+fmt(vol)+' kg')+'</div>'+ckHTML(w)+'<div style="margin-top:10px;font-size:.88rem;display:grid;gap:4px">'+
-  (isRun 
-    ? w.ex.map(x=>'<div><b>'+esc(x.e)+'</b> <span class="mu">('+esc(x.zona||'Livre')+' · Alvo: '+esc(x.alvo||'-')+') — Realizado: <b>'+esc(x.realizado||'Concluído')+'</b></span></div>').join('')
-    : w.ex.map(x=>'<div><b>'+esc(x.e)+'</b> <span class="mu">'+x.s.map(s=>(s.t&&s.t!=='N'?'<b style="color:var(--pri)">'+s.t+'</b> ':'')+fmt(s.kg)+'×'+(s.rf!==undefined&&s.rf!==''?s.rf:s.r)+' (RPE Exec: '+(s.rpef!==undefined&&s.rpef!==''?s.rpef:'-')+')').join(' · ')+'</span>'+(x.nota?'<div class="mu" style="color:var(--acc);margin-top:2px">💬 Nota: '+esc(x.nota)+'</div>':'')+(x.videoAluno?'<div style="margin-top:2px"><a class="vd" href="'+esc(x.videoAluno)+'" target="_blank" rel="noopener">▶ Ver vídeo do aluno</a></div>':'')+'</div>').join('')
-  )+'</div>'+
- (o.coach?'<textarea class="t" id="c'+w.id+'" rows="2" style="margin-top:10px" placeholder="Comentário para o aluno…">'+esc(cm||'')+'</textarea><button class="btn s g" style="margin-top:8px" data-c="cm" data-w="'+w.id+'">Salvar comentário</button>':(cm?'<div class="cm">💬 Treinador: '+esc(cm)+'</div>':''))+
- (o.del?'<button class="x" style="margin-top:6px" data-h="'+w.id+'">Apagar</button>':'')+'</div>'}).join(''):'<p class="mu">Nenhum treino finalizado ainda.</p>'}
+  const cardId = 'hist_card_' + w.id;
+  return '<div class="card">'+
+    '<div class="hist-summary-row" onclick="const d=$(\''+cardId+'\');d.hidden=!d.hidden;">'+
+      '<div>'+
+        '<h3>'+(isRun?'🏃 ':'🏋️ ')+esc(w.n)+'</h3>'+
+        '<div class="mu">'+dt(w.d)+' · '+mmss(w.dur)+(isRun?'':' · vol: '+fmt(vol)+' kg')+'</div>'+
+      '</div>'+
+      '<span class="mu" style="font-size:0.75rem">▼ Toque p/ detalhes</span>'+
+    '</div>'+
+    '<div class="hist-details" id="'+cardId+'" hidden>'+
+      ckHTML(w)+
+      (isRun 
+        ? w.ex.map(x=>'<div><b>'+esc(x.e)+'</b> <span class="mu">('+esc(x.zona||'Livre')+' · Alvo: '+esc(x.alvo||'-')+') — <b>'+esc(x.realizado||'Concluído')+'</b></span></div>').join('')
+        : w.ex.map(x=>'<div><b>'+esc(x.e)+'</b><br><span class="mu">'+x.s.map(s=>(s.t&&s.t!=='N'?'<b style="color:var(--pri)">'+s.t+'</b> ':'')+fmt(s.kg)+'kg×'+(s.rf!==undefined&&s.rf!==''?s.rf:s.r)+' (RPE: '+(s.rpef!==undefined&&s.rpef!==''?s.rpef:'-')+')').join(' · ')+'</span>'+(x.nota?'<div class="mu" style="color:var(--acc);margin-top:2px">💬 '+esc(x.nota)+'</div>':'')+(x.videoAluno?'<div style="margin-top:2px"><a class="vd" href="'+esc(x.videoAluno)+'" target="_blank" rel="noopener">▶ Ver vídeo</a></div>':'')+'</div>').join('')
+      )+
+      (o.coach?'<textarea class="t" id="c'+w.id+'" rows="2" style="margin-top:8px" placeholder="Comentário para o aluno…">'+esc(cm||'')+'</textarea><button class="btn s g" style="margin-top:6px" data-c="cm" data-w="'+w.id+'">Salvar comentário</button>':(cm?'<div class="cm">💬 Treinador: '+esc(cm)+'</div>':''))+
+      (o.del?'<button class="x" style="margin-top:6px; color:var(--danger)" data-h="'+w.id+'">Apagar registro</button>':'')+
+    '</div>'+
+  '</div>';
+}).join(''):'<p class="mu">Nenhum treino finalizado ainda.</p>'}
 
 function ckHTML(w){if(!w.ck&&w.pse==null)return '';const c=w.ck,o=[];
- if(c){o.push('<span class="bd">🔋 Recuperação '+c.rec+'/5</span>','<span class="bd">😴 Descanso '+c.sono+'/5</span>');
-  o.push(c.dor?'<span class="bd warn">⚠ Dor: '+esc((c.locs||[]).join(', ')||'local não informado')+' ('+c.int+'/10)'+(c.obs?' · '+esc(c.obs):'')+'</span>':'<span class="bd ok">Sem dor</span>')}
- if(w.pse!=null)o.push('<span class="bd">🔥 PSE '+w.pse+'/10</span>','<span class="bd">Carga da sessão '+Math.round(w.pse*w.dur/60)+' u.a.</span>');
- return '<div>'+o.join('')+'</div>'}
+ if(c){o.push('<span class="bd">🔋 Recup: '+c.rec+'/5</span>','<span class="bd">😴 Sono: '+c.sono+'/5</span>');
+  o.push(c.dor?'<span class="bd warn">⚠ Dor: '+esc((c.locs||[]).join(', ')||'local')+' ('+c.int+'/10)</span>':'<span class="bd ok">Sem dor</span>')}
+ if(w.pse!=null)o.push('<span class="bd">🔥 PSE: '+w.pse+'/10</span>');
+ return '<div style="margin-bottom:6px">'+o.join('')+'</div>'}
 
 function viewA(){
  const R=rts(me);
@@ -987,8 +1030,8 @@ function viewA(){
    const diaSemanaBadge = r.diaSemana ? `<span class="bd" style="background:var(--acc-t);color:var(--acc)">📅 ${esc(r.diaSemana)}</span>` : '';
    return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3>'+(isRun?'🏃 ':'🏋️ ')+esc(r.n)+'</h3><div>'+diaSemanaBadge+(isRun?'<span class="bd run">Corrida</span>':'')+'</div></div><div class="mu" style="margin-top:4px">'+
    (isRun
-     ? r.ex.map(x=>esc(x.e)+' ('+esc(x.dist)+' · '+esc(x.zona)+' · Pace: '+esc(x.paceAlvo||'livre')+')').join(' · ')
-     : r.ex.map(x=> (x.grupo ? '<span class="bd" style="background:var(--pri-t);color:var(--pri)">'+esc(x.grupo)+'</span> ' : '') + esc(x.e)+' ('+x.s.length+' séries)').join(' · ')
+     ? r.ex.map(x=>esc(x.e)+' ('+esc(x.dist||'-')+')').join(' · ')
+     : r.ex.map(x=> (x.grupo ? '<span class="bd" style="background:var(--pri-t);color:var(--pri)">⚡ '+esc(x.grupo)+' (Seguir direto)</span> ' : '') + esc(x.e)+' ('+x.s.length+'s)').join(' · ')
    )+'</div><button class="btn s t" style="margin-top:12px" data-r="'+r.id+'">Iniciar rotina</button></div>';
  }).join(''):'<p class="mu">Seu treinador ainda não montou rotinas para você.</p>');
 
@@ -1035,6 +1078,28 @@ function start(r){
   renderW();
 }
 
+function abrirRpeInfo(){
+  const modal = $('modalRpeInfo');
+  modal.innerHTML = `
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center">
+        <h3 style="color:var(--pri)">ℹ️ O que é o RPE?</h3>
+        <button class="x" onclick="$('modalRpeInfo').hidden=true">✕ Fechar</button>
+      </div>
+      <div style="margin-top:12px; font-size:0.9rem; line-height:1.6; display:grid; gap:8px">
+        <p><b>RPE (Rate of Perceived Exertion)</b> é a escala de esforço percebido de 1 a 10 que mede quão difícil foi a sua série:</p>
+        <div>🔹 <b>RPE 10:</b> Esforço máximo. Nenhuma repetição a mais seria possível (Falha total).</div>
+        <div>🔹 <b>RPE 9:</b> Muito difícil. Conseguiria no máximo 1 repetição extra.</div>
+        <div>🔹 <b>RPE 8:</b> Difícil. Conseguiria fazer de 2 a 3 repetições extras.</div>
+        <div>🔹 <b>RPE 7:</b> Moderado/Pesado. Conseguiria 4 repetições extras.</div>
+        <div>🔹 <b>RPE abaixo de 6:</b> Muito leve ou aquecimento.</div>
+        <p class="mu" style="margin-top:8px">Preencha no campo <b>RPE (Feito)</b> o valor correspondente ao esforço real que sentiu ao terminar as repetições.</p>
+      </div>
+    </div>
+  `;
+  modal.hidden = false;
+}
+
 function renderW(){
   const w = W;
   const isRun = w.tipo === 'corrida';
@@ -1053,12 +1118,19 @@ function renderW(){
     });
     h += `</div>`;
   } else {
+    h += `<div style="margin-bottom:12px"><button class="btn g" style="width:100%; font-size:0.85rem; padding:10px" onclick="abrirRpeInfo()">ℹ️ O que é o RPE? (Clique para entender)</button></div>`;
+
     w.ex.forEach((x, xi)=>{
-      h += `<div class="card">
+      const grupoBadge = x.grupo ? `<div style="background:var(--pri-t); border-left:3px solid var(--pri); padding:8px 12px; border-radius:8px; margin-bottom:8px; font-size:0.82rem; font-weight:700; color:var(--pri)">⚡ ${esc(x.grupo)}: Faça este exercício logo após o anterior (sem descanso entre eles)!</div>` : '';
+      const descansoSeg = parseInt(x.descanso) || 90;
+
+      h += `${grupoBadge}
+      <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center">
-          <h3>${x.grupo ? '<span class="bd" style="background:var(--pri-t);color:var(--pri)">'+esc(x.grupo)+'</span> ' : ''}${esc(x.e)}</h3>
+          <h3>${esc(x.e)}</h3>
           ${x.v ? '<a class="vd" href="'+esc(x.v)+'" target="_blank" rel="noopener">▶ Vídeo</a>' : ''}
         </div>
+        <div class="mu" style="margin-top:2px">⏱️ Descanso sugerido: <b>${descansoSeg}s</b> após cada série</div>
         <table>
           <tr><th>S</th><th>Kg</th><th>Reps (Alvo)</th><th>Reps (Feito)</th><th>RPE (Alvo)</th><th>RPE (Feito)</th><th>Ok</th></tr>`;
       
@@ -1070,7 +1142,7 @@ function renderW(){
           <td><input type="text" value="${esc(s.rf!==undefined?s.rf:(s.r||''))}" oninput="W.ex[${xi}].s[${si}].rf=this.value;saveActiveWorkout()"></td>
           <td><input type="text" class="readonly-presc" value="${esc(s.rpe!==undefined?s.rpe:'')}" readonly tabindex="-1" title="Prescrito pelo treinador" style="max-width:45px"></td>
           <td><input type="text" value="${esc(s.rpef!==undefined?s.rpef:(s.rpe||''))}" oninput="W.ex[${xi}].s[${si}].rpef=this.value;saveActiveWorkout()" style="max-width:45px"></td>
-          <td><button class="ck" onclick="toggleSérieDone(${xi}, ${si}, ${x.descanso||90})">✓</button></td>
+          <td><button class="ck" onclick="toggleSérieDone(${xi}, ${si}, ${descansoSeg})">✓</button></td>
         </tr>`;
       });
       
@@ -1087,10 +1159,7 @@ function renderW(){
         <button class="btn g" style="margin-top:10px" onclick="if(confirm('Cancelar treino atual?')){clearInterval(tk);W=null;localStorage.removeItem('reis_treino_ativo_'+me);$('w').hidden=true;view()}">Cancelar Treino</button>
         </main>`;
 
-  // Evita re-renderizar todo o DOM caso o foco esteja em um input, impedindo que o teclado feche sozinho
   const activeEl = document.activeElement;
-  const activeId = activeEl ? activeEl.id : null;
-  const activeName = activeEl ? activeEl.name : null;
   const isInputFocused = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA');
 
   if(!isInputFocused){
@@ -1133,7 +1202,6 @@ async function finalizarTreino(){
     });
   }
 
-  // Verifica se Bateu Recorde Pessoal (PR)
   let isPR = false;
   const historicoAntigo = hist(me);
   W.ex.forEach(x => {
@@ -1143,7 +1211,6 @@ async function finalizarTreino(){
         const repsAtual = parseFloat(s.rf || s.r || 0);
         if(cargaAtual > 0 && repsAtual > 0){
           const rmAtual = e1(cargaAtual, repsAtual);
-          // Procura maior 1RM anterior neste exercício
           let maiorRmAntigo = 0;
           historicoAntigo.forEach(treinoAnt => {
             if(treinoAnt.ex){
@@ -1558,7 +1625,7 @@ function viewC(){
       return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3>'+(isRun?'🏃 ':'🏋️ ')+esc(r.n)+'</h3><div>'+diaBadge+'</div></div><div class="mu" style="margin-top:4px">'+
       (isRun 
         ? r.ex.map(x=>esc(x.e)+' ('+esc(x.dist)+' · '+esc(x.zona)+')').join(' · ')
-        : r.ex.map(x=> (x.grupo ? '<span class="bd" style="background:var(--pri-t);color:var(--pri)">'+esc(x.grupo)+'</span> ' : '') + esc(x.e)+' ('+x.s.length+' séries)').join(' · ')
+        : r.ex.map(x=> (x.grupo ? '<span class="bd" style="background:var(--pri-t);color:var(--pri)">⚡ '+esc(x.grupo)+'</span> ' : '') + esc(x.e)+' ('+x.s.length+' séries)').join(' · ')
       )+'</div><div style="margin-top:10px"><button class="btn s g" data-c="editR" data-id="'+r.id+'">Editar</button><button class="x" data-c="delR" data-id="'+r.id+'">Excluir</button></div></div>';
     }).join('')+
     '<div style="display:flex; gap:8px"><button class="btn t" style="flex:1" data-c="newR">+ Musculação</button><button class="btn g" style="flex:1; border-color:var(--acc); color:var(--acc)" data-c="newRRun">+ Corrida</button></div>'+
@@ -1790,7 +1857,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
  else if(c==='rmS') ed.ex[b.dataset.ex].s.splice(b.dataset.si, 1);
  else if(c==='addERun') ed.ex.push({e:'', dist:'', zona:'Z2'});
  else if(c==='rmE') ed.ex.splice(i,1);
- else if(c==='cancelR') ed=label=null;
+ else if(c==='cancelR') ed=null;
  else if(c==='saveR'){
   if(!ed.n.trim()) return;
   const dSemana = ed.diaSemana || 'Segunda-feira';
