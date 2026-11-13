@@ -996,7 +996,7 @@ function histHTML(h,o){return h.length?h.map(w=>{
   const cm=(o.cm||{})[w.id];
   const cardId = 'hist_card_' + w.id;
   return '<div class="card">'+
-    '<div class="hist-summary-row" onclick="const d=$(\''+cardId+'\');d.hidden=!d.hidden;">'+
+    '<div class="hist-summary-row" onclick="const d=document.getElementById(\''+cardId+'\');d.hidden=!d.hidden;">'+
       '<div>'+
         '<h3>'+(isRun?'🏃 ':'🏋️ ')+esc(w.n)+'</h3>'+
         '<div class="mu">'+dt(w.d)+' · '+mmss(w.dur)+(isRun?'':' · vol: '+fmt(vol)+' kg')+'</div>'+
@@ -1229,7 +1229,7 @@ function abrirRpeInfo(){
     <div class="modal-box">
       <div style="display:flex; justify-content:space-between; align-items:center">
         <h3 style="color:var(--pri)">ℹ️ O que é o RPE?</h3>
-        <button class="x" onclick="$('modalRpeInfo').hidden=true">✕ Fechar</button>
+        <button class="x" onclick="document.getElementById('modalRpeInfo').hidden=true">✕ Fechar</button>
       </div>
       <div style="margin-top:12px; font-size:0.9rem; line-height:1.6; display:grid; gap:8px">
         <p><b>RPE (Rate of Perceived Exertion)</b> é a escala de esforço percebido de 1 a 10 que mede quão difícil foi a sua série:</p>
@@ -1482,7 +1482,7 @@ function renderizarModalBusca(){
     <div class="modal-box">
       <div style="display:flex; justify-content:space-between; align-items:center">
         <h3>🔍 Selecionar Exercício</h3>
-        <button class="x" onclick="$('modalBuscaEx').hidden=true">✕ Fechar</button>
+        <button class="x" onclick="document.getElementById('modalBuscaEx').hidden=true">✕ Fechar</button>
       </div>
       <div style="margin-top:10px">
         <button class="btn s t" style="width:100%; margin-bottom:10px" onclick="cadastrarExercicioDireto('${esc(termoReal)}')">+ Adicionar "${esc(termoReal || 'Novo Exercício')}" à Biblioteca</button>
@@ -1718,7 +1718,6 @@ function viewC(){
      const treinosMes = hListAluno.filter(item => item.d && item.d.startsWith(mesAtual)).length;
      const aderenciaPct = Math.min(100, Math.round((treinosMes / metaMes) * 100));
 
-     // Verificar se concluiu treino recentemente (ex: hoje)
      const hojeStr = new Date().toISOString().slice(0,10);
      const ultimoTreino = hListAluno.length ? hListAluno[0] : null;
      const concluiuHoje = ultimoTreino && ultimoTreino.d === hojeStr;
@@ -1730,8 +1729,8 @@ function viewC(){
            '<input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" '+checked+' style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer; margin-top:2px">'+
            '<div>'+
              '<div style="display:flex; align-items:center; gap:8px">'+
-               '<span class="mu" style="font-weight:700">#${index+1}</span>'+
-               '<h3 style="font-size:1.1rem">${esc(alunoNomeOriginal)}</h3>'+
+               '<span class="mu" style="font-weight:700">#'+(index+1)+'</span>'+
+               '<h3 style="font-size:1.1rem">'+esc(alunoNomeOriginal)+'</h3>'+
              '</div>'+
              '<div style="margin-top:4px; font-size:0.85rem; color:var(--pri); font-weight:700">Mensalidade: R$ '+fmt(valorMensal)+'</div>'+
              '<div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px">'+
@@ -2164,7 +2163,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   ed=null;
  }
  else if(c==='cm'){
-  const w=b.dataset.w,t=$('c'+w).value.trim();
+  const w=b.dataset.w,t=document.getElementById('c'+w).value.trim();
   if(!D.coment) D.coment = {};
   const m={...cms(u)};
   if(t) m[w]=t; else delete m[w];
