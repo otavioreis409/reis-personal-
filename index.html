@@ -1038,8 +1038,11 @@ function viewA(){
  document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const r=R.find(x=>x.id==b.dataset.r);start(r)});
  $('hs').innerHTML=histHTML(hist(me),{del:1,cm:cms(me)});
  document.querySelectorAll('[data-h]').forEach(b=>b.onclick=async()=>{const h=hist(me).filter(w=>w.id!=b.dataset.h);if(!D.treinos)D.treinos={};D.treinos[me]={h};await save();view()});
+ 
  const cur=$('sel').value,L=[...new Set(hist(me).filter(h=>h.tipo!=='corrida').flatMap(h=>h.ex.map(x=>x.e)))].sort();
  $('sel').innerHTML=L.map(e=>'<option'+(e===cur?' selected':'')+'>'+esc(e)+'</option>').join('');
+ 
+ renderProgressoAluno();
 }
 
 document.addEventListener('click', async e => {
@@ -1055,6 +1058,65 @@ document.addEventListener('click', async e => {
     alert('Hábitos salvos com sucesso!');
   }
 });
+
+$('sel').onchange = () => renderProgressoAluno();
+
+function renderProgressoAluno(){
+  const exercicioSelecionado = $('sel').value;
+  const hList = hist(me).filter(h => h.tipo !== 'corrida');
+  
+  let melhorRm = 0;
+  let maiorCarga = 0;
+  const treinosCount = hList.length;
+
+  hList.forEach(w => {
+    if(w.ex){
+      w.ex.forEach(x => {
+        if(x.e === exercicioSelecionado && x.s){
+          x.s.forEach(s => {
+            const kg = s.kg || 0;
+            const reps = parseFloat(s.rf || s.r || 0);
+            if(kg > maiorCarga) maiorCarga = kg;
+            if(kg > 0 && reps > 0){
+              const rm = e1(kg, reps);
+              if(rm > melhorRm) melhorRm = rm;
+            }
+          });
+        }
+      });
+    }
+  });
+
+  $('p1').textContent = melhorRm > 0 ? fmt(melhorRm) + ' kg' : '–';
+  $('p2').textContent = maiorCarga > 0 ? fmt(maiorCarga) + ' kg' : '–';
+  $('p3').textContent = treinosCount;
+
+  // Renderiza gráfico em texto/barras simples e limpo
+  let chartHtml = '<h4 style="margin:0 0 10px">Histórico de Cargas (' + esc(exercicioSelecionado || 'Nenhum') + ')</h4>';
+  const pontos = [];
+  hList.forEach(w => {
+    w.ex.forEach(x => {
+      if(x.e === exercicioSelecionado && x.s){
+        const maxKgTreino = Math.max(...x.s.map(s => s.kg || 0));
+        if(maxKgTreino > 0){
+          pontos.push({d: dt(w.d), kg: maxKgTreino});
+        }
+      }
+    });
+  });
+
+  if(pontos.length){
+    chartHtml += '<div style="display:grid; gap:8px">';
+    pontos.forEach(p => {
+      chartHtml += '<div style="display:flex; justify-content:space-between; align-items:center; background:var(--pill); padding:8px 12px; border-radius:8px"><span>📅 ' + p.d + '</span><b style="color:var(--pri)">' + fmt(p.kg) + ' kg</b></div>';
+    });
+    chartHtml += '</div>';
+  } else {
+    chartHtml += '<p class="mu">Nenhum registro de carga encontrado para este exercício.</p>';
+  }
+
+  $('ch').innerHTML = chartHtml;
+}
 
 function start(r){
   W = {
@@ -1709,24 +1771,50 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   const mesAtual = new Date().toISOString().slice(0,7);
   const treinosMes = hList.filter(item => item.d && item.d.startsWith(mesAtual)).length;
   let totalVolumeKg = 0;
+
   hList.forEach(w=>{
     if(w.tipo !== 'corrida'){
       totalVolumeKg += w.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*(s.rf||s.r||0),0),0);
     }
   });
+
   const element = document.createElement('div');
-  element.style.padding = '30px'; element.style.background = '#FFFFFF'; element.style.color = '#111111'; element.style.fontFamily = 'sans-serif';
+  element.style.padding = '24px';
+  element.style.background = '#FFFFFF';
+  element.style.color = '#111111';
+  element.style.fontFamily = 'sans-serif';
+  element.style.fontSize = '12px';
+
+  let historicoHTML = hList.slice(0, 10).map(w => `
+    <div style="margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+      <b>${esc(w.n)}</b> — Data: ${dt(w.d)} — Duração: ${mmss(w.dur)}
+      <div style="color: #555; margin-top: 4px;">
+        ${w.tipo === 'corrida' ? 'Treino de Corrida' : w.ex.map(x => `<div>• ${esc(x.e)}: ${x.s.map(s => `${fmt(s.kg)}kg×${s.rf||s.r||0}`).join(' | ')}</div>`).join('')}
+      </div>
+    </div>
+  `).join('');
+
   element.innerHTML = `
-    <h1 style="color: #111; border-bottom: 2px solid #FFD000; padding-bottom: 10px;">Reis Personal - Relatório Mensal</h1>
-    <h3>Aluno: ${esc(nomeAluno)}</h3>
-    <p><b>Data:</b> ${new Date().toLocaleDateString('pt-BR')}</p>
-    <ul>
-      <li><b>Treinos no mês:</b> ${treinosMes}</li>
-      <li><b>Total Histórico:</b> ${totalTreinos}</li>
-      <li><b>Volume de Carga:</b> ${fmt(totalVolumeKg)} kg</li>
-    </ul>
+    <h1 style="color: #111; border-bottom: 2px solid #FFD000; padding-bottom: 8px; font-size: 18px;">Reis Personal - Relatório de Desempenho</h1>
+    <h3 style="margin: 8px 0; font-size: 14px;">Aluno: ${esc(nomeAluno)}</h3>
+    <p style="margin: 4px 0 12px 0; color: #555;"><b>Data do relatório:</b> ${new Date().toLocaleDateString('pt-BR')}</p>
+    
+    <div style="display: flex; gap: 12px; margin-bottom: 16px; background: #f9f9f9; padding: 10px; border-radius: 6px;">
+      <div><b>Treinos no mês:</b> ${treinosMes}</div>
+      <div><b>Total Histórico:</b> ${totalTreinos}</div>
+      <div><b>Volume Total:</b> ${fmt(totalVolumeKg)} kg</div>
+    </div>
+
+    <h4 style="margin: 16px 0 8px 0; border-bottom: 1px solid #ddd; padding-bottom: 4px;">Últimos Treinos Registrados</h4>
+    <div>${historicoHTML || '<p>Nenhum treino registrado.</p>'}</div>
   `;
-  html2pdf().from(element).set({margin:10, filename:'Relatorio_'+slugify(nomeAluno)+'.pdf', html2canvas:{scale:2}, jsPDF:{unit:'mm', format:'a4'}}).save();
+
+  html2pdf().from(element).set({
+    margin: 10,
+    filename: 'Relatorio_' + slugify(nomeAluno) + '.pdf',
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).save();
  }
  else if(c==='aplicarTemplateGlobal'){
   const tid = b.dataset.tid;
