@@ -345,7 +345,7 @@ input.t,select,textarea.t{
 }
 input.t:focus,select:focus,textarea.t:focus{border-color:var(--pri);outline:none}
 .edr{border-top:1px solid var(--ln);padding-top:14px;margin-top:14px}
-.two{display:grid;grid-template-columns:88px 1fr;gap:10px;margin-top:8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
 
 .cm{
   background:var(--pri-t);
@@ -540,7 +540,7 @@ function drawPse(){const L=['Repouso','Muito fácil','Fácil','Moderado','Um pou
 
 function viewA(){
  const R=rts(me);
- $('rt').innerHTML=R.length?R.map(r=>'<div class="card"><h3>'+esc(r.n)+'</h3><div class="mu" style="margin-top:2px">'+r.ex.map(x=>esc(x.e)+' ('+x.k+'×)').join(' · ')+'</div><button class="btn s t" style="margin-top:12px" data-r="'+r.id+'">Iniciar rotina</button></div>').join(''):'<p class="mu">Seu treinador ainda não montou rotinas para você.</p>';
+ $('rt').innerHTML=R.length?R.map(r=>'<div class="card"><h3>'+esc(r.n)+'</h3><div class="mu" style="margin-top:2px">'+r.ex.map(x=>esc(x.e)+' ('+x.k+' séries · '+esc(x.r||'–')+' reps)').join(' · ')+'</div><button class="btn s t" style="margin-top:12px" data-r="'+r.id+'">Iniciar rotina</button></div>').join(''):'<p class="mu">Seu treinador ainda não montou rotinas para você.</p>';
  document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const r=R.find(x=>x.id==b.dataset.r);start(r.n,r.ex)});
  $('hs').innerHTML=histHTML(hist(me),{del:1,cm:cms(me)});
  document.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{const h=hist(me).filter(w=>w.id!=b.dataset.h);D.treinos[me]={h};save();view()});
@@ -590,7 +590,21 @@ $('sel').onchange=chart;
 
 function viewC(){
  const ids=Object.keys(D.perfis);
- let h='<h2>Alunos Cadastrados</h2><button class="btn t" style="margin-bottom:16px" data-c="novoAluno">+ Adicionar Novo Aluno</button>';
+ let h=`
+  <div class="card" style="border-left: 3px solid var(--pri); margin-bottom: 20px;">
+   <h3 style="color:var(--pri)">💡 Guia Rápido: O que é RPE?</h3>
+   <p class="mu" style="margin-top:6px; font-size:0.88rem; line-height:1.5">
+    <b>RPE (Rate of Perceived Exertion)</b> é a escala de esforço percebido (de 1 a 10) que indica quão próxima da falha muscular a série terminou:<br>
+    • <b>RPE 10:</b> Esforço máximo (nenhuma repetição a mais seria possível).<br>
+    • <b>RPE 9:</b> Sobrou 1 repetição na reserva (RIR 1).<br>
+    • <b>RPE 8:</b> Sobraram 2 repetições na reserva (RIR 2).<br>
+    • <b>RPE 6 a 7:</b> Séries moderadas, com boa margem de segurança.
+   </p>
+  </div>
+  <h2>Alunos Cadastrados</h2>
+  <button class="btn t" style="margin-bottom:16px" data-c="novoAluno">+ Adicionar Novo Aluno</button>
+ `;
+
  if(ids.length){
   h+=ids.map(u=>{
    const checked = D.checks[u] ? 'checked' : '';
@@ -608,8 +622,16 @@ function viewC(){
   const u=open,R=rts(u),best={};
   hist(u).forEach(h=>h.ex.forEach(x=>work(x.s).forEach(s=>{const v=e1(s.kg,s.r);if(!best[x.e]||v>best[x.e])best[x.e]=v})));
   h='<button class="x" data-c="back">← Todos os alunos</button><h2 style="margin-top:4px;font-size:1.4rem">'+esc(D.perfis[u].n)+'</h2><h2>Rotinas</h2>';
-  if(ed){h+='<div class="card"><input class="t" data-ed="n" value="'+esc(ed.n)+'" placeholder="Nome da rotina">'+ed.ex.map((x,i)=>'<div class="edr"><input class="t" list="exl" data-i="'+i+'" data-f="e" value="'+esc(x.e)+'" placeholder="Exercício"><div class="two"><input class="t" type="number" min="1" data-i="'+i+'" data-f="k" value="'+x.k+'" placeholder="Séries"><input class="t" type="number" step="any" data-i="'+i+'" data-f="v" value="'+esc(x.v)+'" placeholder="Link do vídeo (opcional)"></div><button class="x" data-c="rmE" data-i="'+i+'">Remover exercício</button></div>').join('')+'<button class="btn g" style="margin-top:10px" data-c="addE">+ Exercício</button><div style="margin-top:12px"><button class="btn s" data-c="saveR">Salvar rotina</button><button class="btn s g" data-c="cancelR">Cancelar</button></div></div>'}
-  else{h+=R.map(r=>'<div class="card"><h3>'+esc(r.n)+'</h3><div class="mu">'+r.ex.map(x=>esc(x.e)+' ('+x.k+'×)'+(x.v?' ▶':'')).join(' · ')+'</div><div style="margin-top:10px"><button class="btn s g" data-c="editR" data-id="'+r.id+'">Editar</button><button class="x" data-c="delR" data-id="'+r.id+'">Excluir</button></div></div>').join('')+'<button class="btn t" data-c="newR">+ Nova rotina</button>'}
+  if(ed){
+   h+='<div class="card"><input class="t" data-ed="n" value="'+esc(ed.n)+'" placeholder="Nome da rotina (ex: Treino A - Superior)">'+
+   ed.ex.map((x,i)=>'<div class="edr"><input class="t" list="exl" data-i="'+i+'" data-f="e" value="'+esc(x.e)+'" placeholder="Nome do exercício">'+
+   '<div class="two"><div><label class="mu" style="font-size:0.75rem">Séries</label><input class="t" type="number" min="1" data-i="'+i+'" data-f="k" value="'+x.k+'" placeholder="Ex: 3"></div>'+
+   '<div><label class="mu" style="font-size:0.75rem">Repetições</label><input class="t" data-i="'+i+'" data-f="r" value="'+esc(x.r||'')+'" placeholder="Ex: 10 a 12"></div></div>'+
+   '<div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Link do vídeo (opcional)</label><input class="t" type="text" data-i="'+i+'" data-f="v" value="'+esc(x.v)+'" placeholder="https://..."></div>'+
+   '<button class="x" data-c="rmE" data-i="'+i+'" style="margin-top:8px">Remover exercício</button></div>').join('')+
+   '<button class="btn g" style="margin-top:10px" data-c="addE">+ Exercício</button><div style="margin-top:12px"><button class="btn s" data-c="saveR">Salvar rotina</button><button class="btn s g" data-c="cancelR">Cancelar</button></div></div>';
+  }
+  else{h+=R.map(r=>'<div class="card"><h3>'+esc(r.n)+'</h3><div class="mu">'+r.ex.map(x=>esc(x.e)+' ('+x.k+' séries · '+esc(x.r||'–')+' reps)'+(x.v?' ▶':'')).join(' · ')+'</div><div style="margin-top:10px"><button class="btn s g" data-c="editR" data-id="'+r.id+'">Editar</button><button class="x" data-c="delR" data-id="'+r.id+'">Excluir</button></div></div>').join('')+'<button class="btn t" data-c="newR">+ Nova rotina</button>'}
   h+='<h2>Melhor 1RM estimado</h2><div class="card">'+(Object.keys(best).length?Object.keys(best).sort().map(k=>'<div style="display:flex;justify-content:space-between;padding:4px 0"><span>'+esc(k)+'</span><b style="color:var(--pri)">'+fmt(best[k])+' kg</b></div>').join(''):'<span class="mu">Sem registros ainda.</span>')+'<h2>O que o aluno registrou</h2>'+histHTML(hist(u),{coach:1,cm:cms(u)});
  }
  $('vt').innerHTML=h;
@@ -653,13 +675,13 @@ $('vt').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)
  }
  else if(c==='open'){open=id;ed=null}
  else if(c==='back'){open=null;ed=null}
- else if(c==='newR')ed={rid:null,n:'',ex:[{e:'',k:3,v:''}]};
+ else if(c==='newR')ed={rid:null,n:'',ex:[{e:'',k:3,r:'10',v:''}]};
  else if(c==='editR'){const r=rts(u).find(x=>String(x.id)===id);ed={rid:r.id,n:r.n,ex:r.ex.map(x=>({...x}))}}
  else if(c==='delR')saveR(rts(u).filter(x=>String(x.id)!==id));
- else if(c==='addE')ed.ex.push({e:'',k:3,v:''});
+ else if(c==='addE')ed.ex.push({e:'',k:3,r:'10',v:''});
  else if(c==='rmE')ed.ex.splice(i,1);
  else if(c==='cancelR')ed=null;
- else if(c==='saveR'){const ex=ed.ex.filter(x=>x.e.trim()).map(x=>({e:x.e.trim(),k:x.k||3,v:/^https?:\/\//i.test(x.v.trim())?x.v.trim():''}));
+ else if(c==='saveR'){const ex=ed.ex.filter(x=>x.e.trim()).map(x=>({e:x.e.trim(),k:x.k||3,r:String(x.r||'10').trim(),v:/^https?:\/\//i.test(x.v.trim())?x.v.trim():''}));
   if(!ed.n.trim()||!ex.length)return;const r={id:ed.rid||Date.now(),n:ed.n.trim(),ex};
   saveR(ed.rid?rts(u).map(x=>x.id===ed.rid?r:x):[...rts(u),r]);ed=null}
  else if(c==='cm'){const w=b.dataset.w,t=$('c'+w).value.trim(),m={...cms(u)};if(t)m[w]=t;else delete m[w];D.coment[u]={c:m};save();document.activeElement.blur()}
