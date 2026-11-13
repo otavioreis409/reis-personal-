@@ -1011,9 +1011,18 @@ function ckHTML(w){if(!w.ck&&w.pse==null)return '';const c=w.ck,o=[];
 
 function viewA(){
  const R=rts(me);
+ const hojeIso = new Date().toISOString().slice(0,10);
+ if(!D.habitos) D.habitos = {};
+ if(!D.habitos[me]) D.habitos[me] = {};
+ const habHoje = D.habitos[me][hojeIso] || {agua:'', sono:''};
+
+ if($('habAgua')) $('habAgua').value = habHoje.agua !== undefined ? habHoje.agua : '';
+ if($('habSono')) $('habSono').value = habHoje.sono !== undefined ? habHoje.sono : '';
+
  $('rt').innerHTML = (R.length?R.map(r=>{
    const isRun = r.tipo === 'corrida';
-   return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3>'+(isRun?'🏃 ':'🏋️ ')+esc(r.n)+'</h3>'+(isRun?'<span class="bd run">Corrida</span>':'')+'</div><div class="mu" style="margin-top:4px">'+
+   const diaSemanaBadge = r.diaSemana ? `<span class="bd" style="background:var(--acc-t);color:var(--acc)">📅 ${esc(r.diaSemana)}</span>` : '';
+   return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3>'+(isRun?'🏃 ':'🏋️ ')+esc(r.n)+'</h3><div>'+diaSemanaBadge+(isRun?'<span class="bd run">Corrida</span>':'')+'</div></div><div class="mu" style="margin-top:4px">'+
    (isRun
      ? r.ex.map(x=>esc(x.e)+' ('+esc(x.dist)+' · '+esc(x.zona)+' · Pace: '+esc(x.paceAlvo||'livre')+')').join(' · ')
      : r.ex.map(x=> (x.grupo ? '<span class="bd" style="background:var(--pri-t);color:var(--pri)">'+esc(x.grupo)+'</span> ' : '') + esc(x.e)+' ('+x.s.length+' séries)').join(' · ')
@@ -1025,6 +1034,127 @@ function viewA(){
  document.querySelectorAll('[data-h]').forEach(b=>b.onclick=async()=>{const h=hist(me).filter(w=>w.id!=b.dataset.h);if(!D.treinos)D.treinos={};D.treinos[me]={h};await save();view()});
  const cur=$('sel').value,L=[...new Set(hist(me).filter(h=>h.tipo!=='corrida').flatMap(h=>h.ex.map(x=>x.e)))].sort();
  $('sel').innerHTML=L.map(e=>'<option'+(e===cur?' selected':'')+'>'+esc(e)+'</option>').join('');
+}
+
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-hab]');
+  if(b && b.dataset.hab === 'salvar'){
+    const agua = parseFloat($('habAgua').value) || 0;
+    const sono = parseFloat($('habSono').value) || 0;
+    const hojeIso = new Date().toISOString().slice(0,10);
+    if(!D.habitos) D.habitos = {};
+    if(!D.habitos[me]) D.habitos[me] = {};
+    D.habitos[me][hojeIso] = { agua, sono };
+    await save();
+    alert('Hábitos salvos com sucesso!');
+  }
+});
+
+function start(r){
+  W = {
+    id: r.id,
+    n: r.n,
+    tipo: r.tipo || 'musculacao',
+    d: new Date().toISOString().slice(0,10),
+    dur: 0,
+    ex: JSON.parse(JSON.stringify(r.ex))
+  };
+  tk = setInterval(()=>{ W.dur++; if($('wt-t')) $('wt-t').textContent = mmss(W.dur); }, 1000);
+  renderW();
+}
+
+function renderW(){
+  const w = W;
+  const isRun = w.tipo === 'corrida';
+  let h = `<div class="wt"><div style="display:flex; align-items:center; gap:12px"><div><div class="mu" style="font-size:0.75rem">Sessão em Andamento</div><div class="wt-title">${esc(w.n)}</div></div></div><div class="wt-timer" id="wt-t">${mmss(w.dur)}</div></div>`;
+  
+  if(rest > 0){
+    h += `<div class="rest"><span>Descanso: ${mmss(rest)}</span><button class="x" onclick="rest=0;renderW()">Pular</button></div>`;
+  }
+
+  h += `<main style="padding-top:16px">`;
+  
+  if(isRun){
+    h += `<div class="card"><h3>Registro de Corrida</h3>`;
+    w.ex.forEach((x, i)=>{
+      h += `<div style="margin-top:12px"><label class="mu" style="font-size:0.75rem"><b>${esc(x.e)}</b> (Alvo: ${esc(x.dist||'-')} · ${esc(x.zona||'Z2')})</label><input class="t" id="run_res_${i}" placeholder="Ex: Feito 5.2 km em 28 min" style="margin-top:4px" value="${esc(x.realizado||'')}"></div>`;
+    });
+    h += `</div>`;
+  } else {
+    w.ex.forEach((x, xi)=>{
+      h += `<div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center">
+          <h3>${x.grupo ? '<span class="bd" style="background:var(--pri-t);color:var(--pri)">'+esc(x.grupo)+'</span> ' : ''}${esc(x.e)}</h3>
+          ${x.v ? '<a class="vd" href="'+esc(x.v)+'" target="_blank" rel="noopener">▶ Vídeo</a>' : ''}
+        </div>
+        <table>
+          <tr><th>Série</th><th>Kg</th><th>Reps</th><th>RPE</th><th>Ação</th></tr>`;
+      
+      x.s.forEach((s, si)=>{
+        h += `<tr class="${s.done?'d':''}">
+          <td><button class="ty ${s.t==='A'?'tA':s.t==='F'?'tF':s.t==='D'?'tD':''}" onclick="toggleSérieTipo(${xi}, ${si})">${s.t||(si+1)}</button></td>
+          <td><input type="number" step="0.5" value="${s.kg!==undefined?s.kg:''}" oninput="W.ex[${xi}].s[${si}].kg=parseFloat(this.value)||0"></td>
+          <td><input type="text" value="${s.r!==undefined?s.r:''}" oninput="W.ex[${xi}].s[${si}].r=this.value"></td>
+          <td><input type="text" value="${s.rpe!==undefined?s.rpe:''}" placeholder="-" style="max-width:50px" oninput="W.ex[${xi}].s[${si}].rpe=this.value"></td>
+          <td><button class="ck" onclick="toggleSérieDone(${xi}, ${si}, ${x.descanso||90})">✓</button></td>
+        </tr>`;
+      });
+      
+      h += `</table>
+        <div style="margin-top:10px">
+          <input class="t" placeholder="Nota ou observação para o treinador..." value="${esc(x.nota||'')}" oninput="W.ex[${xi}].nota=this.value">
+          <input class="t" placeholder="Link do seu vídeo executando (opcional)" value="${esc(x.videoAluno||'')}" style="margin-top:6px" oninput="W.ex[${xi}].videoAluno=this.value">
+        </div>
+      </div>`;
+    });
+  }
+
+  h += `<button class="btn t" style="margin-top:20px" onclick="finalizarTreino()">Finalizar Treino</button>
+        <button class="btn g" style="margin-top:10px" onclick="if(confirm('Cancelar treino atual?')){clearInterval(tk);W=null;$('w').hidden=true;view()}">Cancelar Treino</button>
+        </main>`;
+
+  $('w').innerHTML = h;
+  $('w').hidden = false;
+}
+
+function toggleSérieTipo(xi, si){
+  const tipos = [undefined, 'A', 'F', 'D'];
+  const s = W.ex[xi].s[si];
+  const idx = tipos.indexOf(s.t);
+  s.t = tipos[(idx + 1) % tipos.length];
+  renderW();
+}
+
+function toggleSérieDone(xi, si, tempoDescanso){
+  const s = W.ex[xi].s[si];
+  s.done = !s.done;
+  if(s.done && tempoDescanso > 0){
+    rest = tempoDescanso;
+    if(window.restTimer) clearInterval(window.restTimer);
+    window.restTimer = setInterval(()=>{
+      rest--;
+      if(rest <= 0){ clearInterval(window.restTimer); }
+      if($('w').hidden === false) renderW();
+    }, 1000);
+  }
+  renderW();
+}
+
+async function finalizarTreino(){
+  clearInterval(tk);
+  if(W.tipo === 'corrida'){
+    W.ex.forEach((x, i)=>{
+      const el = $('run_res_'+i);
+      if(el) x.realizado = el.value.trim();
+    });
+  }
+  if(!D.treinos) D.treinos = {};
+  if(!D.treinos[me]) D.treinos[me] = {h: []};
+  D.treinos[me].h.unshift(W);
+  await save();
+  W = null;
+  $('w').hidden = true;
+  view();
 }
 
 function abrirBuscaExercicios(exerIdx, isTemplate = false){
@@ -1328,12 +1458,18 @@ function viewC(){
   h+='<h2>Rotinas de Treino</h2>';
   if(ed){
    const isRunEd = ed.tipo === 'corrida';
+   const diasSemanaList = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo', 'Livre / Outro'];
+   
    h+='<div class="card">'+
       '<div style="display:flex; gap:8px; margin-bottom:12px">'+
       '<button class="chip '+(!isRunEd?'on':'')+'" data-c="setTipoEd" data-tipo="musculacao">🏋️ Musculação</button>'+
       '<button class="chip '+(isRunEd?'on':'')+'" data-c="setTipoEd" data-tipo="corrida">🏃 Corrida</button>'+
       '</div>'+
-      '<input class="t" data-ed="n" value="'+esc(ed.n)+'" placeholder="'+(isRunEd?'Nome do treino':'Nome da rotina (ex: Treino A - Superior)')+'">';
+      '<input class="t" data-ed="n" value="'+esc(ed.n)+'" placeholder="'+(isRunEd?'Nome do treino':'Nome da rotina (ex: Treino A - Superior)')+'" style="margin-bottom:10px">'+
+      '<label class="mu" style="font-size:0.75rem">Dia da semana recomendado para este treino:</label>'+
+      '<select class="t" data-ed="diaSemana" style="margin-top:4px; margin-bottom:12px">'+
+      diasSemanaList.map(d=>'<option value="'+d+'" '+(ed.diaSemana===d?'selected':'')+'>'+d+'</option>').join('')+
+      '</select>';
    
    if(isRunEd){
      h += ed.ex.map((x,i)=>'<div class="edr">'+
@@ -1381,7 +1517,8 @@ function viewC(){
   else{
     h+=R.map(r=>{
       const isRun = r.tipo === 'corrida';
-      return '<div class="card"><h3>'+(isRun?'🏃 ':'🏋️ ')+esc(r.n)+'</h3><div class="mu">'+
+      const diaBadge = r.diaSemana ? `<span class="bd" style="background:var(--acc-t);color:var(--acc)">📅 ${esc(r.diaSemana)}</span>` : '';
+      return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3>'+(isRun?'🏃 ':'🏋️ ')+esc(r.n)+'</h3><div>'+diaBadge+'</div></div><div class="mu" style="margin-top:4px">'+
       (isRun 
         ? r.ex.map(x=>esc(x.e)+' ('+esc(x.dist)+' · '+esc(x.zona)+')').join(' · ')
         : r.ex.map(x=> (x.grupo ? '<span class="bd" style="background:var(--pri-t);color:var(--pri)">'+esc(x.grupo)+'</span> ' : '') + esc(x.e)+' ('+x.s.length+' séries)').join(' · ')
@@ -1437,12 +1574,15 @@ $('vt').addEventListener('change',e=>{
  if(t.dataset.f === 'zona'){
    ed.ex[t.dataset.i].zona = t.value;
  }
+ if(t.dataset.ed === 'diaSemana'){
+   ed.diaSemana = t.value;
+ }
 });
 
 $('vt').addEventListener('input',e=>{
  const t=e.target;
  if(!ed)return;
- if(t.dataset.ed) ed.n = t.value;
+ if(t.dataset.ed && t.dataset.ed !== 'diaSemana') ed.n = t.value;
  else if(t.dataset.f !== undefined && t.dataset.ex !== undefined){
    ed.ex[t.dataset.ex][t.dataset.f] = t.value;
  }
@@ -1491,7 +1631,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   if(!alunosIds.length){ alert('Nenhum aluno cadastrado.'); return; }
   const alunoEscolhido = prompt('Digite o nome ou ID do aluno que receberá este template:\n\n' + alunosIds.join('\n'));
   if(alunoEscolhido && D.perfis[alunoEscolhido]){
-    const novaRotina = { id: Date.now(), tipo: 'musculacao', n: tpl.n, ex: JSON.parse(JSON.stringify(tpl.ex)) };
+    const novaRotina = { id: Date.now(), tipo: 'musculacao', n: tpl.n, diaSemana: 'Segunda-feira', ex: JSON.parse(JSON.stringify(tpl.ex)) };
     if(!D.rotinas) D.rotinas = {};
     if(!D.rotinas[alunoEscolhido]) D.rotinas[alunoEscolhido] = { rt: [] };
     D.rotinas[alunoEscolhido].rt.push(novaRotina);
@@ -1550,7 +1690,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   const tid = b.dataset.tid;
   const tpl = D.templates[tid];
   if(tpl && u){
-   const novaRotina = { id: Date.now(), tipo: 'musculacao', n: tpl.n, ex: JSON.parse(JSON.stringify(tpl.ex)) };
+   const novaRotina = { id: Date.now(), tipo: 'musculacao', n: tpl.n, diaSemana: 'Segunda-feira', ex: JSON.parse(JSON.stringify(tpl.ex)) };
    await saveR([...rts(u), novaRotina]);
    view();
   }
@@ -1595,11 +1735,11 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
     ed.ex = novoTipo === 'corrida' ? [{e:'Aquecimento', dist:'10 min', zona:'Z1'}] : [{e:'', v:'', grupo:'', descanso:90, s:[{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''}]}];
   }
  }
- else if(c==='newR') ed={rid:null, tipo:'musculacao', n:'', ex:[{e:'', v:'', grupo:'', descanso:90, s:[{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''}]}]};
- else if(c==='newRRun') ed={rid:null, tipo:'corrida', n:'', ex:[{e:'Aquecimento', dist:'10 min', zona:'Z1'}]};
+ else if(c==='newR') ed={rid:null, tipo:'musculacao', n:'', diaSemana:'Segunda-feira', ex:[{e:'', v:'', grupo:'', descanso:90, s:[{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''},{kg:'', r:'10', rpe:''}]}]};
+ else if(c==='newRRun') ed={rid:null, tipo:'corrida', n:'', diaSemana:'Segunda-feira', ex:[{e:'Aquecimento', dist:'10 min', zona:'Z1'}]};
  else if(c==='editR'){
   const r=rts(u).find(x=>String(x.id)===id);
-  ed={rid:r.id, tipo:r.tipo||'musculacao', n:r.n, ex:r.ex.map(x=>({
+  ed={rid:r.id, tipo:r.tipo||'musculacao', n:r.n, diaSemana:r.diaSemana||'Segunda-feira', ex:r.ex.map(x=>({
     e: x.e,
     v: x.v || '',
     grupo: x.grupo || '',
@@ -1616,6 +1756,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
  else if(c==='cancelR') ed=null;
  else if(c==='saveR'){
   if(!ed.n.trim()) return;
+  const dSemana = ed.diaSemana || 'Segunda-feira';
   if(ed.tipo === 'corrida'){
     const ex = ed.ex.filter(x=>x.e.trim()).map(x=>({
       e: x.e.trim(),
@@ -1623,7 +1764,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
       zona: x.zona || 'Z2'
     }));
     if(!ex.length) return;
-    const r = {id:ed.rid||Date.now(), tipo:'corrida', n:ed.n.trim(), ex};
+    const r = {id:ed.rid||Date.now(), tipo:'corrida', n:ed.n.trim(), diaSemana:dSemana, ex};
     await saveR(ed.rid?rts(u).map(x=>x.id===ed.rid?r:x):[...rts(u),r]);
   } else {
     const ex=ed.ex.filter(x=>x.e.trim()).map(x=>({
@@ -1638,7 +1779,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
       }))
     }));
     if(!ex.length) return;
-    const r={id:ed.rid||Date.now(), tipo:'musculacao', n:ed.n.trim(),ex};
+    const r={id:ed.rid||Date.now(), tipo:'musculacao', n:ed.n.trim(), diaSemana:dSemana, ex};
     await saveR(ed.rid?rts(u).map(x=>x.id===ed.rid?r:x):[...rts(u),r]);
   }
   ed=null;
