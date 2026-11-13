@@ -694,8 +694,7 @@ const mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0'),dt=d=>d.split('-
 const work=s=>s.filter(x=>x.t!=='A');
 const slugify=s=>s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 
-const BANCO_EXER = [
-  // PEITORAL
+const BANCO_EXER_PADRAO = [
   { n: "Supino Reto com Barra", m: "Peitoral", v: "https://www.youtube.com/watch?v=rT7DgCr-3pg" },
   { n: "Supino Reto com Halteres", m: "Peitoral", v: "https://www.youtube.com/watch?v=VmB1G1K7v94" },
   { n: "Supino Inclinado com Barra", m: "Peitoral", v: "https://www.youtube.com/watch?v=DbFgADq_Gug" },
@@ -710,8 +709,6 @@ const BANCO_EXER = [
   { n: "Paralelas para Peito (Mergulho)", m: "Peitoral", v: "" },
   { n: "Supino na Máquina (Chest Press)", m: "Peitoral", v: "" },
   { n: "Peck Deck (Voador)", m: "Peitoral", v: "" },
-  
-  // COSTAS
   { n: "Puxada Alta na Polia (Frente)", m: "Costas", v: "https://www.youtube.com/watch?v=CAwf7n6Luuc" },
   { n: "Puxada Alta Triângulo", m: "Costas", v: "" },
   { n: "Puxada com Barra Reta (Pulldown)", m: "Costas", v: "" },
@@ -725,8 +722,6 @@ const BANCO_EXER = [
   { n: "Barra Fixa Supinada (Chin-up)", m: "Costas", v: "" },
   { n: "Levantamento Terra Tradicional", m: "Costas", v: "https://www.youtube.com/watch?v=op9kVnSso6Q" },
   { n: "Pulldown na Polia com Corda", m: "Costas", v: "" },
-
-  // PERNAS (QUADRÍCEPS & POSTERIOR)
   { n: "Agachamento Livre com Barra", m: "Pernas", v: "https://www.youtube.com/watch?v=aclHkVaku9U" },
   { n: "Agachamento Frontal com Barra", m: "Pernas", v: "" },
   { n: "Agachamento Hack", m: "Pernas", v: "" },
@@ -742,16 +737,12 @@ const BANCO_EXER = [
   { n: "Afundo com Halteres", m: "Pernas", v: "" },
   { n: "Búlgaro com Halteres", m: "Pernas", v: "https://www.youtube.com/watch?v=2C-4rj7v0v4" },
   { n: "Good Morning", m: "Pernas", v: "" },
-
-  // GLÚTEOS
   { n: "Elevação Pélvica na Máquina", m: "Glúteos", v: "https://www.youtube.com/watch?v=SE_2rvL-4aA" },
   { n: "Elevação Pélvica com Barra", m: "Glúteos", v: "" },
   { n: "Glúteo na Polia (Coice)", m: "Glúteos", v: "" },
   { n: "Cadeira Abdutora", m: "Glúteos", v: "" },
   { n: "Cadeira Adutora", m: "Pernas", v: "" },
   { n: "Extensão de Quadril no Solo", m: "Glúteos", v: "" },
-
-  // OMBROS
   { n: "Elevação Lateral com Halteres", m: "Ombros", v: "https://www.youtube.com/watch?v=3VscugTfxzo" },
   { n: "Elevação Lateral na Polia", m: "Ombros", v: "" },
   { n: "Desenvolvimento com Halteres", m: "Ombros", v: "https://www.youtube.com/watch?v=qE_mksG3q9U" },
@@ -763,8 +754,6 @@ const BANCO_EXER = [
   { n: "Remada Alta com Barra", m: "Ombros", v: "" },
   { n: "Encolhimento de Ombros com Halteres", m: "Ombros", v: "" },
   { n: "Encolhimento com Barra", m: "Ombros", v: "" },
-
-  // BÍCEPS
   { n: "Rosca Direta com Barra Reta", m: "Bíceps", v: "https://www.youtube.com/watch?v=ykJmrZ5v0Oo" },
   { n: "Rosca Direta com Barra W", m: "Bíceps", v: "" },
   { n: "Rosca Direta com Halteres (Alternada)", m: "Bíceps", v: "" },
@@ -773,8 +762,6 @@ const BANCO_EXER = [
   { n: "Rosca Concentrada com Halter", m: "Bíceps", v: "" },
   { n: "Rosca na Polia Baixa", m: "Bíceps", v: "" },
   { n: "Rosca Inversa com Barra", m: "Antebraço", v: "" },
-
-  // TRÍCEPS
   { n: "Tríceps Testa com Barra W", m: "Tríceps", v: "https://www.youtube.com/watch?v=d_KZxkY_0cM" },
   { n: "Tríceps Testa com Halteres", m: "Tríceps", v: "" },
   { n: "Tríceps na Polia com Corda", m: "Tríceps", v: "https://www.youtube.com/watch?v=vB9X-4oU3L0" },
@@ -783,14 +770,10 @@ const BANCO_EXER = [
   { n: "Tríceps Francês com Halter", m: "Tríceps", v: "" },
   { n: "Mergulho nas Paralelas (Tríceps)", m: "Tríceps", v: "" },
   { n: "Supino Fechado com Barra", m: "Tríceps", v: "" },
-
-  // PANTURRILHAS
   { n: "Panturrilhas em Pé na Máquina", m: "Panturrilhas", v: "" },
   { n: "Panturrilhas Sentado (Máquina Solear)", m: "Panturrilhas", v: "" },
   { n: "Panturrilha no Leg Press 45º", m: "Panturrilhas", v: "" },
   { n: "Panturrilha Livre em Pé", m: "Panturrilhas", v: "" },
-
-  // ABDÔMEN & LOMBAR
   { n: "Abdominal Supra no Solo (Crunch)", m: "Abdômen", v: "" },
   { n: "Abdominal na Polia (De joelhos)", m: "Abdômen", v: "" },
   { n: "Abdominal Infra na Barra Fixa (Elevação de pernas)", m: "Abdômen", v: "" },
@@ -799,8 +782,6 @@ const BANCO_EXER = [
   { n: "Prancha Lateral", m: "Abdômen", v: "" },
   { n: "Abdominal Remador", m: "Abdômen", v: "" },
   { n: "Extensão de Lombar no Banco (Hiperextensão)", m: "Abdômen", v: "" },
-
-  // CARDIO
   { n: "Esteira - Corrida Contínua", m: "Cardio", v: "" },
   { n: "Esteira - Caminhada Inclinada", m: "Cardio", v: "" },
   { n: "Bicicleta Ergométrica", m: "Cardio", v: "" },
@@ -809,6 +790,9 @@ const BANCO_EXER = [
   { n: "Remo Seco (Ergômetro)", m: "Cardio", v: "" },
   { n: "Pular Corda", m: "Cardio", v: "" }
 ];
+
+// Carregar banco personalizado salvo no navegador se existir
+let BANCO_EXER = JSON.parse(localStorage.getItem('reis_banco_exer')) || BANCO_EXER_PADRAO;
 
 let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}, habitos:{}, cooper:{}, templates:{}, financeiro:{}};
 let isLoaded = false; 
@@ -1411,6 +1395,24 @@ function selecionarMusculoFiltro(musculo){
   renderizarModalBusca();
 }
 
+function abrirModalCadastrarNovoExercicio(){
+  const nomeEx = prompt('Nome do novo exercício (ex: Supino Inclinado com Halteres):');
+  if(!nomeEx || !nomeEx.trim()) return;
+  const grupoEx = prompt('Grupo muscular principal (ex: Peitoral, Costas, Pernas, Ombros, Bíceps, Tríceps, Panturrilhas, Abdômen, Cardio):', 'Peitoral');
+  const videoEx = prompt('Link do vídeo de execução no YouTube (opcional):', '');
+
+  const novoItem = {
+    n: nomeEx.trim(),
+    m: grupoEx ? grupoEx.trim() : 'Outros',
+    v: videoEx ? videoEx.trim() : ''
+  };
+
+  BANCO_EXER.push(novoItem);
+  localStorage.setItem('reis_banco_exer', JSON.stringify(BANCO_EXER));
+  alert('Exercício cadastrado com sucesso na sua biblioteca!');
+  renderizarModalBusca();
+}
+
 function renderizarModalBusca(){
   const grupos = ['Todos', 'Peitoral', 'Costas', 'Pernas', 'Glúteos', 'Ombros', 'Bíceps', 'Tríceps', 'Panturrilhas', 'Abdômen', 'Antebraço', 'Cardio'];
   const inputEl = $('filtroExInput');
@@ -1429,7 +1431,10 @@ function renderizarModalBusca(){
         <h3>🔍 Selecionar Exercício</h3>
         <button class="x" onclick="$('modalBuscaEx').hidden=true">✕ Fechar</button>
       </div>
-      <input class="t" id="filtroExInput" placeholder="Digite para filtrar exercício..." style="margin-top:10px" value="${esc(termoReal)}" oninput="renderizarModalBusca()">
+      <div style="margin-top:10px">
+        <button class="btn s t" style="width:100%; margin-bottom:10px" onclick="abrirModalCadastrarNovoExercicio()">+ Adicionar Novo Exercício à Biblioteca</button>
+      </div>
+      <input class="t" id="filtroExInput" placeholder="Digite para filtrar exercício..." value="${esc(termoReal)}" oninput="renderizarModalBusca()">
       <div class="muscle-chips-container">
         ${grupos.map(g => `<button class="muscle-chip ${filtroMusculoAtual===g?'on':''}" onclick="selecionarMusculoFiltro('${g}')">${g}</button>`).join('')}
       </div>
