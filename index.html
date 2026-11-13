@@ -695,42 +695,123 @@ const work=s=>s.filter(x=>x.t!=='A');
 const slugify=s=>s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 
 const BANCO_EXER = [
+  // PEITORAL
   { n: "Supino Reto com Barra", m: "Peitoral", v: "https://www.youtube.com/watch?v=rT7DgCr-3pg" },
-  { n: "Supino Reto com Halteres", m: "Peitoral", v: "" },
-  { n: "Supino Inclinado com Barra", m: "Peitoral", v: "" },
+  { n: "Supino Reto com Halteres", m: "Peitoral", v: "https://www.youtube.com/watch?v=VmB1G1K7v94" },
+  { n: "Supino Inclinado com Barra", m: "Peitoral", v: "https://www.youtube.com/watch?v=DbFgADq_Gug" },
   { n: "Supino Inclinado com Halteres", m: "Peitoral", v: "https://www.youtube.com/watch?v=5xPuvmUnzZ8" },
   { n: "Supino Declinado com Barra", m: "Peitoral", v: "" },
   { n: "Crucifixo Reto com Halteres", m: "Peitoral", v: "" },
-  { n: "Crucifixo na Polia (Crossover)", m: "Peitoral", v: "" },
+  { n: "Crucifixo Inclinado com Halteres", m: "Peitoral", v: "" },
+  { n: "Crucifixo na Polia (Crossover)", m: "Peitoral", v: "https://www.youtube.com/watch?v=taI4XduLlvA" },
+  { n: "Crossover Polia Alta", m: "Peitoral", v: "" },
+  { n: "Crossover Polia Baixa", m: "Peitoral", v: "" },
   { n: "Flexão de Braços no Solo", m: "Peitoral", v: "" },
   { n: "Paralelas para Peito (Mergulho)", m: "Peitoral", v: "" },
+  { n: "Supino na Máquina (Chest Press)", m: "Peitoral", v: "" },
+  { n: "Peck Deck (Voador)", m: "Peitoral", v: "" },
+  
+  // COSTAS
   { n: "Puxada Alta na Polia (Frente)", m: "Costas", v: "https://www.youtube.com/watch?v=CAwf7n6Luuc" },
+  { n: "Puxada Alta Triângulo", m: "Costas", v: "" },
+  { n: "Puxada com Barra Reta (Pulldown)", m: "Costas", v: "" },
   { n: "Remada Curvada com Barra", m: "Costas", v: "https://www.youtube.com/watch?v=vT2GjY_Umpw" },
-  { n: "Remada Baixa na Polia", m: "Costas", v: "" },
+  { n: "Remada Curvada com Halteres", m: "Costas", v: "" },
+  { n: "Remada Baixa na Polia", m: "Costas", v: "https://www.youtube.com/watch?v=GZbfZ033f74" },
   { n: "Remada Unilateral com Halter (Serrote)", m: "Costas", v: "" },
+  { n: "Remada Cavalinho (T-Bar Row)", m: "Costas", v: "" },
+  { n: "Remada na Máquina Sentada", m: "Costas", v: "" },
   { n: "Barra Fixa Pronada", m: "Costas", v: "" },
+  { n: "Barra Fixa Supinada (Chin-up)", m: "Costas", v: "" },
   { n: "Levantamento Terra Tradicional", m: "Costas", v: "https://www.youtube.com/watch?v=op9kVnSso6Q" },
+  { n: "Pulldown na Polia com Corda", m: "Costas", v: "" },
+
+  // PERNAS (QUADRÍCEPS & POSTERIOR)
   { n: "Agachamento Livre com Barra", m: "Pernas", v: "https://www.youtube.com/watch?v=aclHkVaku9U" },
+  { n: "Agachamento Frontal com Barra", m: "Pernas", v: "" },
+  { n: "Agachamento Hack", m: "Pernas", v: "" },
+  { n: "Agachamento Sumô com Halter", m: "Pernas", v: "" },
   { n: "Leg Press 45º", m: "Pernas", v: "https://www.youtube.com/watch?v=IZxyjW7MPJQ" },
-  { n: "Cadeira Extensora", m: "Pernas", v: "" },
-  { n: "Mesa Flexora", m: "Pernas", v: "" },
-  { n: "Stiff com Barra", m: "Pernas", v: "" },
-  { n: "Elevação Pélvica na Máquina", m: "Glúteos", v: "" },
+  { n: "Leg Press Horizontal", m: "Pernas", v: "" },
+  { n: "Cadeira Extensora", m: "Pernas", v: "https://www.youtube.com/watch?v=m0FOsZ5V6yA" },
+  { n: "Mesa Flexora", m: "Pernas", v: "https://www.youtube.com/watch?v=ELOCsopsiUA" },
+  { n: "Cadeira Flexora", m: "Pernas", v: "" },
+  { n: "Flexor em Pé", m: "Pernas", v: "" },
+  { n: "Stiff com Barra", m: "Pernas", v: "https://www.youtube.com/watch?v=1uDiWbluSE0" },
+  { n: "Stiff com Halteres", m: "Pernas", v: "" },
+  { n: "Afundo com Halteres", m: "Pernas", v: "" },
+  { n: "Búlgaro com Halteres", m: "Pernas", v: "https://www.youtube.com/watch?v=2C-4rj7v0v4" },
+  { n: "Good Morning", m: "Pernas", v: "" },
+
+  // GLÚTEOS
+  { n: "Elevação Pélvica na Máquina", m: "Glúteos", v: "https://www.youtube.com/watch?v=SE_2rvL-4aA" },
+  { n: "Elevação Pélvica com Barra", m: "Glúteos", v: "" },
+  { n: "Glúteo na Polia (Coice)", m: "Glúteos", v: "" },
+  { n: "Cadeira Abdutora", m: "Glúteos", v: "" },
+  { n: "Cadeira Adutora", m: "Pernas", v: "" },
+  { n: "Extensão de Quadril no Solo", m: "Glúteos", v: "" },
+
+  // OMBROS
   { n: "Elevação Lateral com Halteres", m: "Ombros", v: "https://www.youtube.com/watch?v=3VscugTfxzo" },
-  { n: "Desenvolvimento com Halteres", m: "Ombros", v: "" },
+  { n: "Elevação Lateral na Polia", m: "Ombros", v: "" },
+  { n: "Desenvolvimento com Halteres", m: "Ombros", v: "https://www.youtube.com/watch?v=qE_mksG3q9U" },
+  { n: "Desenvolvimento Militar com Barra", m: "Ombros", v: "" },
+  { n: "Desenvolvimento na Máquina", m: "Ombros", v: "" },
+  { n: "Elevação Frontal com Halteres", m: "Ombros", v: "" },
+  { n: "Crucifixo Inverso com Halteres (Posterior)", m: "Ombros", v: "" },
+  { n: "Crucifixo Inverso na Polia", m: "Ombros", v: "" },
+  { n: "Remada Alta com Barra", m: "Ombros", v: "" },
+  { n: "Encolhimento de Ombros com Halteres", m: "Ombros", v: "" },
+  { n: "Encolhimento com Barra", m: "Ombros", v: "" },
+
+  // BÍCEPS
   { n: "Rosca Direta com Barra Reta", m: "Bíceps", v: "https://www.youtube.com/watch?v=ykJmrZ5v0Oo" },
-  { n: "Rosca Martelo com Halteres", m: "Bíceps", v: "" },
+  { n: "Rosca Direta com Barra W", m: "Bíceps", v: "" },
+  { n: "Rosca Direta com Halteres (Alternada)", m: "Bíceps", v: "" },
+  { n: "Rosca Martelo com Halteres", m: "Bíceps", v: "https://www.youtube.com/watch?v=7j6w0f64c6s" },
+  { n: "Rosca Scott com Barra W", m: "Bíceps", v: "" },
+  { n: "Rosca Concentrada com Halter", m: "Bíceps", v: "" },
+  { n: "Rosca na Polia Baixa", m: "Bíceps", v: "" },
+  { n: "Rosca Inversa com Barra", m: "Antebraço", v: "" },
+
+  // TRÍCEPS
   { n: "Tríceps Testa com Barra W", m: "Tríceps", v: "https://www.youtube.com/watch?v=d_KZxkY_0cM" },
-  { n: "Tríceps na Polia com Corda", m: "Tríceps", v: "" },
+  { n: "Tríceps Testa com Halteres", m: "Tríceps", v: "" },
+  { n: "Tríceps na Polia com Corda", m: "Tríceps", v: "https://www.youtube.com/watch?v=vB9X-4oU3L0" },
+  { n: "Tríceps na Polia com Barra Reta", m: "Tríceps", v: "" },
+  { n: "Tríceps Coice com Halter", m: "Tríceps", v: "" },
+  { n: "Tríceps Francês com Halter", m: "Tríceps", v: "" },
+  { n: "Mergulho nas Paralelas (Tríceps)", m: "Tríceps", v: "" },
+  { n: "Supino Fechado com Barra", m: "Tríceps", v: "" },
+
+  // PANTURRILHAS
   { n: "Panturrilhas em Pé na Máquina", m: "Panturrilhas", v: "" },
+  { n: "Panturrilhas Sentado (Máquina Solear)", m: "Panturrilhas", v: "" },
+  { n: "Panturrilha no Leg Press 45º", m: "Panturrilhas", v: "" },
+  { n: "Panturrilha Livre em Pé", m: "Panturrilhas", v: "" },
+
+  // ABDÔMEN & LOMBAR
   { n: "Abdominal Supra no Solo (Crunch)", m: "Abdômen", v: "" },
+  { n: "Abdominal na Polia (De joelhos)", m: "Abdômen", v: "" },
+  { n: "Abdominal Infra na Barra Fixa (Elevação de pernas)", m: "Abdômen", v: "" },
+  { n: "Abdominal Infra no Solo", m: "Abdômen", v: "" },
   { n: "Prancha Abdominal Isométrica", m: "Abdômen", v: "" },
+  { n: "Prancha Lateral", m: "Abdômen", v: "" },
+  { n: "Abdominal Remador", m: "Abdômen", v: "" },
+  { n: "Extensão de Lombar no Banco (Hiperextensão)", m: "Abdômen", v: "" },
+
+  // CARDIO
   { n: "Esteira - Corrida Contínua", m: "Cardio", v: "" },
-  { n: "Bicicleta Ergométrica", m: "Cardio", v: "" }
+  { n: "Esteira - Caminhada Inclinada", m: "Cardio", v: "" },
+  { n: "Bicicleta Ergométrica", m: "Cardio", v: "" },
+  { n: "Elíptico (Elliptical)", m: "Cardio", v: "" },
+  { n: "Simulador de Escada (Stairmaster)", m: "Cardio", v: "" },
+  { n: "Remo Seco (Ergômetro)", m: "Cardio", v: "" },
+  { n: "Pular Corda", m: "Cardio", v: "" }
 ];
 
 let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}, habitos:{}, cooper:{}, templates:{}, financeiro:{}};
-let isLoaded = false; // TRAVA DE SEGURANÇA 2: Impede salvamento antes da carga completa
+let isLoaded = false; 
 
 const urlParams = new URLSearchParams(window.location.search);
 let urlAluno = urlParams.get('aluno');
@@ -744,7 +825,6 @@ async function loadFromCloud(){
     const doc = await db.collection('app').doc('reis_db').get();
     if(doc.exists){
       const cloudData = doc.data() || {};
-      // TRAVA DE SEGURANÇA 1: Mesclagem Inteligente (Merge) sem perder dados anteriores
       D = {
         perfis: { ...cloudData.perfis, ...(D.perfis || {}) },
         treinos: { ...cloudData.treinos, ...(D.treinos || {}) },
@@ -759,7 +839,6 @@ async function loadFromCloud(){
         financeiro: { ...cloudData.financeiro, ...(D.financeiro || {}) }
       };
       
-      // Se houver dados na nuvem para perfis, atualiza o objeto principal com os dados consolidados
       if(cloudData.perfis) {
         Object.keys(cloudData.perfis).forEach(k => {
           if(!D.perfis[k]) D.perfis[k] = cloudData.perfis[k];
@@ -775,7 +854,7 @@ async function loadFromCloud(){
     console.error("Erro ao carregar nuvem", e); 
   }
   
-  isLoaded = true; // Libera salvamentos seguros após leitura concluída
+  isLoaded = true; 
 
   if(urlAluno){
     let nomeFormatado = urlAluno.charAt(0).toUpperCase() + urlAluno.slice(1);
@@ -802,13 +881,12 @@ async function loadFromCloud(){
 }
 
 async function save(){ 
-  if(!isLoaded) return; // TRAVA DE SEGURANÇA 2: Bloqueia salvamento se a leitura inicial falhou ou não terminou
+  if(!isLoaded) return; 
   try {
     await db.collection('app').doc('reis_db').set(D);
   } catch(e){ console.error("Erro ao salvar nuvem", e); }
 }
 
-// TRAVA DE SEGURANÇA 3: Função dedicada para Atualização Parcial de chaves específicas na nuvem
 async function savePartial(key, subKey, data){
   if(!isLoaded) return;
   try {
@@ -820,7 +898,6 @@ async function savePartial(key, subKey, data){
       await db.collection('app').doc('reis_db').update({ [key]: D[key] });
     }
   } catch(e) {
-    // Fallback caso o documento ainda não exista no formato exato de sub-chave
     await save();
   }
 }
@@ -875,7 +952,7 @@ function precisaAnamnese(){
   if(coachView || !urlAluno) return false;
   const a = D.anamnese[me];
   if(!a) return true;
-  if(W) return false; // Se estiver em treino ativo, nunca força anamnese
+  if(W) return false; 
   const doisMeses = 5184000000;
   if(a.data && (Date.now() - a.data > doisMeses)) return true;
   return false;
@@ -942,7 +1019,6 @@ function viewA(){
 
  renderZonasCooperAluno();
 
- // VISUAL LIMPO DAS ROTINAS (Apenas nome e dia da semana)
  $('rt').innerHTML = (R.length?R.map(r=>{
    const isRun = r.tipo === 'corrida';
    const diaSemanaBadge = r.diaSemana ? `<span class="bd" style="background:var(--acc-t);color:var(--acc)">📅 ${esc(r.diaSemana)}</span>` : '';
@@ -1297,7 +1373,6 @@ async function finalizarTreino(){
   if(!D.treinos[me]) D.treinos[me]  = {h: []};
   D.treinos[me].h.unshift(W);
   
-  // ATUALIZAÇÃO PARCIAL: Salva apenas os treinos do aluno sem mexer em perfis ou templates globais
   await savePartial('treinos', me, D.treinos[me]);
   
   localStorage.removeItem('reis_treino_ativo_' + me);
@@ -1995,7 +2070,6 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
  }
  view()});
 
-// Inicializa carregando da nuvem
 loadFromCloud();
 </script>
 </body>
