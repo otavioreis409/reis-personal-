@@ -104,7 +104,6 @@ h2:first-child{margin-top:0}
 .card h3{margin:0 0 4px;font-size:1rem;font-weight:700;letter-spacing:-.01em}
 .mu{color:var(--mu);font-size:.82rem}
 
-/* Botões principais estilo pílula branca do design.json */
 .btn{
   display:block;
   width:100%;
@@ -147,7 +146,6 @@ h2:first-child{margin-top:0}
   margin-right:8px;
 }
 
-/* Barra de abas inferior */
 .tabs{
   position:fixed;
   bottom:0;
@@ -177,7 +175,6 @@ h2:first-child{margin-top:0}
 .tabs button b{display:block;font-size:1.25rem;line-height:1.25;margin-bottom:2px}
 .tabs button.on{color:var(--pri);border-top-color:var(--pri)}
 
-/* Overlay de treino ativo */
 #w{
   position:fixed;
   inset:0;
@@ -216,7 +213,6 @@ h2:first-child{margin-top:0}
   border-radius:9999px;
 }
 
-/* Pílula flutuante de descanso estilo print (0:16 | Pause/Pular) */
 .rest{
   position:fixed;
   bottom:calc(20px + env(safe-area-inset-bottom,0px));
@@ -245,7 +241,6 @@ h2:first-child{margin-top:0}
   text-decoration:none;
 }
 
-/* Tabela de séries estilo Dark Performance UI */
 table{width:100%;border-collapse:separate;border-spacing:0 8px;margin-top:6px}
 th{
   font-size:.68rem;
@@ -393,7 +388,6 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   box-shadow:var(--sh);
 }
 
-/* Check-in & PSE */
 .q{margin-bottom:20px}.q h4{margin:0 0 10px;font-size:.92rem;font-weight:700}
 .opts{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .opt{
@@ -467,166 +461,6 @@ input[type=range]{width:100%;accent-color:var(--pri)}
 <div class="tabs" id="tabs" hidden><button data-v="0"><b>🏋️</b>Treino</button><button data-v="1"><b>🗓️</b>Histórico</button><button data-v="2"><b>📈</b>Progresso</button></div>
 <div id="w" hidden></div><datalist id="exl"></datalist>
 <script>
-// Mock de ambiente para visualização interativa (simula claude.use('user') e claude.use('db'))
-window.claude = {
-  _store: {
-    perfis: {
-      u_lucas: { n: 'Lucas Silva' },
-      u_mariana: { n: 'Mariana Costa' }
-    },
-    rotinas: {
-      u_lucas: {
-        rt: [
-          {
-            id: 101,
-            n: 'Treino A · Push (Peito, Ombro e Tríceps)',
-            ex: [
-              { e: 'Supino inclinado com halteres', k: 4, v: 'https://www.youtube.com/results?search_query=supino+inclinado+halteres' },
-              { e: 'Supino reto', k: 3, v: '' },
-              { e: 'Desenvolvimento', k: 3, v: '' },
-              { e: 'Tríceps corda', k: 3, v: '' }
-            ]
-          },
-          {
-            id: 102,
-            n: 'Treino B · Pull (Costas e Bíceps)',
-            ex: [
-              { e: 'Remada curvada', k: 4, v: '' },
-              { e: 'Barra fixa', k: 3, v: '' },
-              { e: 'Rosca direta', k: 3, v: '' }
-            ]
-          }
-        ]
-      },
-      u_mariana: {
-        rt: [
-          {
-            id: 201,
-            n: 'Inferiores · Foco Quadríceps',
-            ex: [
-              { e: 'Agachamento', k: 4, v: '' },
-              { e: 'Leg Press 45°', k: 4, v: '' }
-            ]
-          }
-        ]
-      }
-    },
-    treinos: {
-      u_lucas: {
-        h: [
-          {
-            id: 1731360000000,
-            d: '2026-11-10',
-            n: 'Treino A · Push (Peito, Ombro e Tríceps)',
-            dur: 3180,
-            pse: 8,
-            ck: { rec: 4, sono: 5, dor: false, locs: [], int: 1, obs: '' },
-            ex: [
-              { e: 'Supino inclinado com halteres', s: [{ kg: 20, r: 12, t: 'A' }, { kg: 32, r: 10, t: 'N' }, { kg: 32, r: 10, t: 'N' }, { kg: 34, r: 8, t: 'F' }] },
-              { e: 'Supino reto', s: [{ kg: 80, r: 10, t: 'N' }, { kg: 82.5, r: 8, t: 'N' }, { kg: 82.5, r: 8, t: 'N' }] },
-              { e: 'Desenvolvimento', s: [{ kg: 24, r: 10, t: 'N' }, { kg: 24, r: 9, t: 'N' }, { kg: 22, r: 10, t: 'D' }] }
-            ]
-          },
-          {
-            id: 1730928000000,
-            d: '2026-11-05',
-            n: 'Treino A · Push (Peito, Ombro e Tríceps)',
-            dur: 3040,
-            pse: 7,
-            ck: { rec: 4, sono: 4, dor: false, locs: [], int: 1, obs: '' },
-            ex: [
-              { e: 'Supino inclinado com halteres', s: [{ kg: 30, r: 10, t: 'N' }, { kg: 32, r: 9, t: 'N' }, { kg: 32, r: 8, t: 'N' }] },
-              { e: 'Supino reto', s: [{ kg: 75, r: 10, t: 'N' }, { kg: 80, r: 8, t: 'N' }, { kg: 80, r: 7, t: 'N' }] }
-            ]
-          },
-          {
-            id: 1730582400000,
-            d: '2026-11-01',
-            n: 'Treino A · Push (Peito, Ombro e Tríceps)',
-            dur: 2950,
-            pse: 8,
-            ck: { rec: 3, sono: 4, dor: false, locs: [], int: 1, obs: '' },
-            ex: [
-              { e: 'Supino reto', s: [{ kg: 75, r: 9, t: 'N' }, { kg: 75, r: 8, t: 'N' }, { kg: 77.5, r: 7, t: 'N' }] }
-            ]
-          }
-        ]
-      },
-      u_mariana: {
-        h: [
-          {
-            id: 1731273600000,
-            d: '2026-11-09',
-            n: 'Inferiores · Foco Quadríceps',
-            dur: 3420,
-            pse: 9,
-            ck: { rec: 3, sono: 3, dor: true, locs: ['Joelho'], int: 4, obs: 'Leve desconforto no aquecimento' },
-            ex: [
-              { e: 'Agachamento', s: [{ kg: 40, r: 12, t: 'A' }, { kg: 70, r: 10, t: 'N' }, { kg: 75, r: 8, t: 'N' }, { kg: 75, r: 8, t: 'F' }] }
-            ]
-          }
-        ]
-      }
-    },
-    coment: {
-      u_lucas: {
-        c: {
-          1731360000000: 'Excelente progressão no supino inclinado! Semana que vem vamos buscar 9 reps com 34 kg.'
-        }
-      },
-      u_mariana: { c: {} }
-    }
-  },
-  _listeners: { perfis: [], treinos: [], rotinas: [], coment: [] },
-  _notify(col) {
-    const snap = {
-      docs: Object.entries(this._store[col] || {}).map(([id, val]) => ({
-        id,
-        data: () => JSON.parse(JSON.stringify(val))
-      }))
-    };
-    (this._listeners[col] || []).forEach(fn => fn(snap));
-  },
-  async use(type) {
-    if (type === 'user') {
-      return {
-        id: async () => 'u_lucas',
-        canEdit: async () => true
-      };
-    }
-    if (type === 'db') {
-      const self = this;
-      return {
-        collection(col) {
-          return {
-            onSnapshot(cb) {
-              self._listeners[col].push(cb);
-              setTimeout(() => self._notify(col), 40);
-            }
-          };
-        },
-        doc(path) {
-          const [col, id] = path.split('/');
-          return {
-            onSnapshot(cb) {
-              self._listeners[col].push(() => {
-                const val = self._store[col] && self._store[col][id];
-                cb({ exists: !!val, data: () => (val ? JSON.parse(JSON.stringify(val)) : null) });
-              });
-              setTimeout(() => self._notify(col), 40);
-            },
-            async set(data) {
-              if (!self._store[col]) self._store[col] = {};
-              self._store[col][id] = JSON.parse(JSON.stringify(data));
-              self._notify(col);
-            }
-          };
-        }
-      };
-    }
-  }
-};
-
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=n=>(Math.round(n*10)/10).toString().replace('.',','),e1=(l,r)=>r<=1?l:l*(1+r/30);
@@ -641,7 +475,7 @@ const put=async(p,d)=>{try{await db.doc(p).set(d)}catch(e){fail(e)}};
 
 async function init(){
  try{const user=await claude.use('user');db=await claude.use('db');
-  if(!db||!user)throw 0;me=await user.id();isCoach=await user.canEdit();if(!me)throw 0;coachView=false}
+  if(!db||!user)throw 0;me=await user.id();isCoach=await user.canEdit();if(!me)throw 0;coachView=isCoach}
  catch(e){msg('Para usar o Reis Personal, entre na sua conta do Claude e peça ao seu treinador para compartilhar o link com você.');return}
  setTimeout(()=>{if(ready<4)msg('Está demorando para carregar. Verifique sua conexão e se o treinador liberou seu acesso.')},10000);
  COLS.forEach(c=>{
@@ -689,7 +523,6 @@ function drawCk(){const c=W.ck,R=['😫|Péssima','😕|Ruim','😐|Ok','🙂|Bo
   '<p id="qe" hidden style="color:var(--danger);font-weight:700">Responda recuperação e descanso para continuar.</p><button class="btn" data-a="go">Começar treino</button></div>'}
 function drawPse(){const L=['Repouso','Muito fácil','Fácil','Moderado','Um pouco difícil','Difícil','Difícil','Muito difícil','Muito difícil','Muito difícil','Máximo'];
  $('w').innerHTML='<div class="wt"><button class="x" data-a="back">← Voltar</button><b style="letter-spacing:.08em;font-size:.82rem;color:var(--pri)">FINAL</b><span></span></div><div style="padding:8px 16px;max-width:640px;margin:0 auto"><h2 class="wt-title" style="margin-bottom:14px">Como foi o treino?</h2><div class="card"><h4 style="margin:0 0 4px;font-size:1rem">Percepção de esforço da sessão</h4><p class="mu" style="margin-bottom:14px">Pense no treino inteiro: de 0 (repouso) a 10 (esforço máximo).</p><div class="pse">'+Array.from({length:11},(_,v)=>'<button class="opt'+(W.pse===v?' on':'')+'" data-a="pse" data-v="'+v+'" style="border-bottom:4px solid hsl('+(120-12*v)+',75%,48%)"><b>'+v+'</b></button>').join('')+'</div><p style="margin:14px 0 0;font-weight:700;color:var(--pri)">'+(W.pse===null?'Escolha um número':W.pse+' · '+L[W.pse])+'</p></div><button class="btn" data-a="save">Salvar treino</button></div>'}
-/* ---------- Aluno ---------- */
 function viewA(){
  const R=rts(me);
  $('rt').innerHTML=R.length?R.map(r=>'<div class="card"><h3>'+esc(r.n)+'</h3><div class="mu" style="margin-top:2px">'+r.ex.map(x=>esc(x.e)+' ('+x.k+'×)').join(' · ')+'</div><button class="btn s t" style="margin-top:12px" data-r="'+r.id+'">Iniciar rotina</button></div>').join(''):'<p class="mu">Seu treinador ainda não montou rotinas para você. Você já pode registrar um treino vazio.</p>';
@@ -740,7 +573,6 @@ function chart(){
 }
 $('sel').onchange=chart;
 
-/* ---------- Treinador ---------- */
 function viewC(){
  const ids=Object.keys(D.perfis);
  if(!open||!D.perfis[open]){$('vt').innerHTML='<h2>Alunos</h2>'+(ids.length?ids.map(u=>'<div class="card"><h3>'+esc(D.perfis[u].n)+(u===me?' (você)':'')+'</h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)'+(hist(u)[0]?' · último em '+dt(hist(u)[0].d):'')+' · '+rts(u).length+' rotina(s)</div>'+(hist(u)[0]&&hist(u)[0].ck&&hist(u)[0].ck.dor?'<div class="bd warn">⚠ Dor relatada no último treino</div>':'')+'<button class="btn s" style="margin-top:12px" data-c="open" data-id="'+esc(u)+'">Abrir</button></div>').join(''):'<div class="card"><p class="mu">Nenhum aluno ainda. Compartilhe o link com seus alunos: quando abrirem e informarem o nome, eles aparecem aqui.</p></div>');return}
