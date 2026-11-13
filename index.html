@@ -939,7 +939,7 @@ $('seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
    else if(p !== null){ alert('Senha incorreta!'); }
   }
  } else {
-  coachView = false; localStorage.getItem('reis_coach', '0'); open = null; ed = null; edTpl = null; view();
+  coachView = false; localStorage.setItem('reis_coach', '0'); open = null; ed = null; edTpl = null; view();
  }
 });
 
@@ -1000,7 +1000,7 @@ function histHTML(h,o){return h.length?h.map(w=>{
     ? w.ex.map(x=>'<div><b>'+esc(x.e)+'</b> <span class="mu">('+esc(x.zona||'Livre')+' · Alvo: '+esc(x.alvo||'-')+') — Realizado: <b>'+esc(x.realizado||'Concluído')+'</b></span></div>').join('')
     : w.ex.map(x=>'<div><b>'+esc(x.e)+'</b> <span class="mu">'+x.s.map(s=>(s.t&&s.t!=='N'?'<b style="color:var(--pri)">'+s.t+'</b> ':'')+fmt(s.kg)+'×'+s.r+(s.rpe?' (RPE '+s.rpe+')':'')).join(' · ')+'</span>'+(x.nota?'<div class="mu" style="color:var(--acc);margin-top:2px">💬 Nota: '+esc(x.nota)+'</div>':'')+(x.videoAluno?'<div style="margin-top:2px"><a class="vd" href="'+esc(x.videoAluno)+'" target="_blank" rel="noopener">▶ Ver vídeo do aluno</a></div>':'')+'</div>').join('')
   )+'</div>'+
- (o.coach?'<textarea class="t" id="c'+w.id+'" rows="2" style="margin-top:10px" placeholder="Comentário para o aluno…">'+esc(cm||'')+'</textarea><button class="btn s g" style="margin-top:8px" data-c="cm" data-w="'+w.id+'">Salvar comentário</button>':(cm?'<div class="cm">💬 Treinador: '+esc(cm)+'</div>':''))+
+ (o.coach?'<textarea class="t" id="c'+w.id+'" rows="2" style="margin-top:10px" placeholder="Comentário para o aluno…">'+esc(cm||'')+'</textarea><button class="btn s g" style="margin-top:8px" data-c="cm" data-w="'+w.id+'">Salvar comentário</button>':(cm?'<div class="cm">💬 Treinador: '+esc(cm+'</div>':''))+
  (o.del?'<button class="x" style="margin-top:6px" data-h="'+w.id+'">Apagar</button>':'')+'</div>'}).join(''):'<p class="mu">Nenhum treino finalizado ainda.</p>'}
 
 function ckHTML(w){if(!w.ck&&w.pse==null)return '';const c=w.ck,o=[];
@@ -1034,7 +1034,7 @@ function abrirBuscaExercicios(exerIdx, isTemplate = false){
   const modal = $('modalBuscaEx');
   modal.hidden = false;
   renderizarModalBusca();
-  setTimeout(()=>$('filtroExInput').focus(), 100);
+  setTimeout(()=>{ const el = $('filtroExInput'); if(el) el.focus(); }, 100);
 }
 
 function selecionarMusculoFiltro(musculo){
@@ -1044,7 +1044,6 @@ function selecionarMusculoFiltro(musculo){
 
 function renderizarModalBusca(){
   const grupos = ['Todos', 'Peitoral', 'Costas', 'Pernas', 'Glúteos', 'Ombros', 'Bíceps', 'Tríceps', 'Panturrilhas', 'Abdômen', 'Antebraço', 'Cardio'];
-  const termo = ($('filtroExInput') ? $('filtroExInput'.toLowerCase()) : '').toLowerCase();
   const inputEl = $('filtroExInput');
   const termoReal = inputEl ? inputEl.value.toLowerCase() : '';
 
@@ -1352,7 +1351,7 @@ function viewC(){
        return '<div class="edr">'+
        '<div style="display:flex; gap:8px; align-items:center; margin-bottom:8px">'+
        '<select style="max-width:130px; font-size:0.75rem; padding:6px" onchange="ed.ex['+exerIdx+'].grupo=this.value">'+
-       '<option value="" '+(!x.grupo?'selected':''+'>Exercício Normal</option>'+
+       '<option value="" '+(!x.grupo?'selected':'')+'>Exercício Normal</option>'+
        '<option value="Bi-set A" '+(x.grupo==='Bi-set A'?'selected':'')+'>Bi-set A</option>'+
        '<option value="Bi-set B" '+(x.grupo==='Bi-set B'?'selected':'')+'>Bi-set B</option>'+
        '<option value="Tri-set" '+(x.grupo==='Tri-set'?'selected':'')+'>Tri-set / Super</option>'+
@@ -1645,7 +1644,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   ed=null;
  }
  else if(c==='cm'){
-  const w=b.dataset.w,t=$('c'+w).value.trim();
+  const w=b.dataset.w,t=$('c'+w).value.trin();
   if(!D.coment) D.coment = {};
   const m={...cms(u)};
   if(t) m[w]=t; else delete m[w];
