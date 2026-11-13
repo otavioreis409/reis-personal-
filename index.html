@@ -1953,7 +1953,6 @@ function viewC(){
      return res;
    };
 
-   // Render para os não marcados (desmarcados)
    const renderizarCardsAlunosNaoFeitos = (lista, tituloSecao) => {
      if(!lista.length) return '';
      let res = `<h3 style="font-size:0.95rem; color:var(--mu); margin:16px 0 8px; text-transform:uppercase; letter-spacing:0.04em">${tituloSecao} (${lista.length})</h3>`;
