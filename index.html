@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
 <title>Reis Personal</title>
+<!-- Firebase SDKs para Sincronização em Nuvem -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --bg:#0D0D0F;
@@ -488,6 +491,18 @@ input[type=range]{width:100%;accent-color:var(--pri)}
 <div class="tabs" id="tabs"><button data-v="0"><b>🏋️</b>Treino</button><button data-v="1"><b>🗓️</b>Histórico</button><button data-v="2"><b>📈</b>Progresso</button></div>
 <div id="w" hidden></div><datalist id="exl"></datalist>
 <script>
+// CONFIGURAÇÃO DO FIREBASE (Chaves do seu projeto)
+const firebaseConfig = {
+  apiKey: "AIzaSySvC7FTIGdIe5o6XThAnPrudwWiEWoo",
+  authDomain: "reis-personal-1f7f8.firebaseapp.com",
+  projectId: "reis-personal-1f7f8",
+  storageBucket: "reis-personal-1f7f8.appspot.com",
+  messagingSenderId: "540725921414",
+  appId: "1:540725921414:web:44918158a512fc6d20501f"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=n=>(Math.round(n*10)/10).toString().replace('.',','),e1=(l,r)=>r<=1?l:l*(1+r/30);
@@ -522,11 +537,7 @@ function calcRunningZones(distMeters){
   return { dist: d, vo2, vamKmh, vamPace: formatPace(vamPace), zones };
 }
 
-let D = JSON.parse(localStorage.getItem('reis_db') || '{"perfis":{},"treinos":{},"rotinas":{},"coment":{},"checks":{},"anamnese":{},"corrida":{}}');
-if(!D.checks) D.checks = {};
-if(!D.anamnese) D.anamnese = {};
-if(!D.rotinas) D.rotinas = {};
-if(!D.corrida) D.corrida = {};
+let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}};
 
 const urlParams = new URLSearchParams(window.location.search);
 let urlAluno = urlParams.get('aluno');
@@ -534,16 +545,32 @@ let me = urlAluno ? ('aluno_' + slugify(urlAluno)) : '';
 
 let coachView = !urlAluno && localStorage.getItem('reis_coach') === '1', tab = 0, W = null, tk = null, rest = 0, ed = null, open = null;
 
-function save(){ localStorage.setItem('reis_db', JSON.stringify(D)); }
-const hist=u=>(D.treinos[u]&&D.treinos[u].h)||[],rts=u=>(D.rotinas[u]&&D.rotinas[u].rt)||[],cms=u=>(D.coment[u]&&D.coment[u].c)||{};
-
-if(urlAluno){
-  let nomeFormatado = urlAluno.charAt(0).toUpperCase() + urlAluno.slice(1);
-  if(!D.perfis[me]) {
-    D.perfis[me] = {n: nomeFormatado};
-    save();
+async function loadFromCloud(){
+  try {
+    const doc = await db.collection('app').doc('reis_db').get();
+    if(doc.exists){
+      D = doc.data();
+    }
+  } catch(e){ console.error("Erro ao carregar nuvem", e); }
+  
+  if(urlAluno){
+    let nomeFormatado = urlAluno.charAt(0).toUpperCase() + urlAluno.slice(1);
+    if(!D.perfis) D.perfis = {};
+    if(!D.perfis[me]) {
+      D.perfis[me] = {n: nomeFormatado};
+      save();
+    }
   }
+  view();
 }
+
+async function save(){ 
+  try {
+    await db.collection('app').doc('reis_db').set(D);
+  } catch(e){ console.error("Erro ao salvar nuvem", e); }
+}
+
+const hist=u=>(D.treinos[u]&&D.treinos[u].h)||[],rts=u=>(D.rotinas[u]&&D.rotinas[u].rt)||[],cms=u=>(D.coment[u]&&D.coment[u].c)||{};
 
 if(urlAluno){
   $('seg').style.display = 'none';
@@ -564,7 +591,7 @@ $('seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
 
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{tab=+b.dataset.v;view()});
 
-$('btnSalvarAnamnese').onclick = () => {
+$('btnSalvarAnamnese').onclick = async () => {
   const alt = parseFloat($('anAlt').value);
   const peso = parseFloat($('anPeso').value);
   const dor = $('anDor').value.trim();
@@ -577,11 +604,9 @@ $('btnSalvarAnamnese').onclick = () => {
     return;
   }
 
-  D.anamnese[me] = {
-    alt, peso, dor, dias, tempo, obj,
-    data: Date.now()
-  };
-  save();
+  if(!D.anamnese) D.anamnese = {};
+  D.anamnese[me] = { alt, peso, dor, dias, tempo, obj, data: Date.now() };
+  await save();
   view();
 };
 
@@ -609,7 +634,7 @@ function view(){
  $('who').textContent = coachView ? 'Painel do Treinador' : (D.perfis[me] ? 'Olá, '+D.perfis[me].n+'!' : '');
  
  const s=new Set();
- Object.values(D.treinos).forEach(t=>(t.h||[]).forEach(h=>{if(h.tipo!=='corrida')h.ex.forEach(x=>s.add(x.e))}));
+ Object.values(D.treinos||{}).forEach(t=>(t.h||[]).forEach(h=>{if(h.tipo!=='corrida')h.ex.forEach(x=>s.add(x.e))}));
  $('exl').innerHTML=[...s].sort().map(e=>'<option value="'+esc(e)+'">').join('');
 
  if(invalidLink || showAnamnese) return;
@@ -666,7 +691,7 @@ function viewA(){
 
  document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const r=R.find(x=>x.id==b.dataset.r);start(r)});
  $('hs').innerHTML=histHTML(hist(me),{del:1,cm:cms(me)});
- document.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{const h=hist(me).filter(w=>w.id!=b.dataset.h);D.treinos[me]={h};save();view()});
+ document.querySelectorAll('[data-h]').forEach(b=>b.onclick=async()=>{const h=hist(me).filter(w=>w.id!=b.dataset.h);if(!D.treinos)D.treinos={};D.treinos[me]={h};await save();view()});
  const cur=$('sel').value,L=[...new Set(hist(me).filter(h=>h.tipo!=='corrida').flatMap(h=>h.ex.map(x=>x.e)))].sort();
  $('sel').innerHTML=L.map(e=>'<option'+(e===cur?' selected':'')+'>'+esc(e)+'</option>').join('');chart();
 }
@@ -759,11 +784,16 @@ $('w').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||
      const ex = W.ex.filter(y=>y.d).map(y=>({e:y.e, zona:y.zona, alvo:y.dist+' ('+(y.paceAlvo||'Livre')+')', realizado:y.realizado||'Concluído'}));
      if(ex.length){
        const h=[{id:Date.now(), tipo:'corrida', d:new Date().toISOString().slice(0,10), n:W.n, dur:Math.floor((Date.now()-W.t0)/1000), ex, pse:W.pse, ck:W.ck}, ...hist(me)];
+       if(!D.treinos) D.treinos = {};
        D.treinos[me]={h}; save();
      }
    } else {
      const ex=W.ex.map(y=>({e:y.e,s:y.s.filter(s=>s.d).map(s=>({kg:parseFloat(String(s.kg).replace(',','.')),r:parseInt(s.r),t:s.t}))})).filter(y=>y.s.length);
-     if(ex.length){const h=[{id:Date.now(), tipo:'musculacao', d:new Date().toISOString().slice(0,10),n:W.n,dur:Math.floor((Date.now()-W.t0)/1000),ex,pse:W.pse,ck:W.ck},...hist(me)];D.treinos[me]={h};save()}
+     if(ex.length){
+       const h=[{id:Date.now(), tipo:'musculacao', d:new Date().toISOString().slice(0,10),n:W.n,dur:Math.floor((Date.now()-W.t0)/1000),ex,pse:W.pse,ck:W.ck},...hist(me)];
+       if(!D.treinos) D.treinos = {};
+       D.treinos[me]={h}; save();
+     }
    }
    close_();
  }
@@ -782,7 +812,7 @@ function chart(){
 $('sel').onchange=chart;
 
 function viewC(){
- const ids=Object.keys(D.perfis);
+ const ids=Object.keys(D.perfis||{});
  let h=`
   <div class="card" style="border-left: 3px solid var(--pri); margin-bottom: 20px;">
    <h3 style="color:var(--pri)">💡 Guia Rápido: RPE & Zonas de Corrida</h3>
@@ -797,7 +827,7 @@ function viewC(){
 
  if(ids.length){
   h+=ids.map(u=>{
-   const checked = D.checks[u] ? 'checked' : '';
+   const checked = (D.checks||{})[u] ? 'checked' : '';
    const alunoNomeOriginal = D.perfis[u].n;
    const nomeParam = slugify(alunoNomeOriginal);
    const linkAluno = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + '?aluno=' + nomeParam;
@@ -813,7 +843,7 @@ function viewC(){
   const u=open,R=rts(u),best={};
   hist(u).filter(h=>h.tipo!=='corrida').forEach(h=>h.ex.forEach(x=>work(x.s).forEach(s=>{const v=e1(s.kg,s.r);if(!best[x.e]||v>best[x.e])best[x.e]=v})));
   
-  const anam = D.anamnese[u] || {};
+  const anam = (D.anamnese||{})[u] || {};
   let imcText = '–';
   if(anam.alt && anam.peso){
     const imc = anam.peso / (anam.alt * anam.alt);
@@ -825,7 +855,7 @@ function viewC(){
     imcText = fmt(imc) + ' (' + classif + ')';
   }
 
-  const cooperDist = (D.corrida[u] && D.corrida[u].cooper) || '';
+  const cooperDist = (D.corrida && D.corrida[u] && D.corrida[u].cooper) || '';
   const runData = calcRunningZones(cooperDist);
 
   h='<button class="x" data-c="back">← Todos os alunos</button><h2 style="margin-top:4px;font-size:1.4rem">'+esc(D.perfis[u].n)+'</h2>';
@@ -925,9 +955,10 @@ function viewC(){
  $('vt').innerHTML=h;
 }
 
-function toggleCheck(u, status){
+async function toggleCheck(u, status){
+ if(!D.checks) D.checks = {};
  D.checks[u] = status;
- save();
+ await save();
 }
 
 $('vt').addEventListener('change',e=>{
@@ -940,19 +971,20 @@ $('vt').addEventListener('change',e=>{
 
 $('vt').addEventListener('input',e=>{const t=e.target;if(!ed)return;if(t.dataset.ed)ed.n=t.value;else if(t.dataset.f && t.dataset.f!=='zona'){const x=ed.ex[t.dataset.i];x[t.dataset.f]=t.dataset.f==='k'?(parseInt(t.value)||1):t.value}});
 
-$('vt').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)return;const c=b.dataset.c,id=b.dataset.id,i=b.dataset.i,u=open;
- const saveR=r=>{
-  if(!D.rotinas[u]) D.rotinas[u] = {};
-  D.rotinas[u].rt = r;
-  save();
+$('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');if(!b)return;const c=b.dataset.c,id=b.dataset.id,i=b.dataset.i,u=open;
+ const saveR = async r => {
+  if(!D.rotinas) D.rotinas = {};
+  D.rotinas[u] = {rt: r};
+  await save();
  };
  if(c==='novoAluno'){
   const nome = prompt('Digite o nome do novo aluno:');
   if(nome && nome.trim()){
    const slug = slugify(nome);
    const novoId = 'aluno_' + slug;
+   if(!D.perfis) D.perfis = {};
    D.perfis[novoId] = {n: nome.trim()};
-   save();
+   await save();
    view();
   }
  }
@@ -963,12 +995,12 @@ $('vt').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)
  else if(c==='delAluno'){
   if(confirm('Tem certeza que deseja excluir este aluno?')){
    delete D.perfis[id];
-   delete D.treinos[id];
-   delete D.rotinas[id];
-   delete D.checks[id];
-   delete D.anamnese[id];
-   delete D.corrida[id];
-   save();
+   if(D.treinos) delete D.treinos[id];
+   if(D.rotinas) delete D.rotinas[id];
+   if(D.checks) delete D.checks[id];
+   if(D.anamnese) delete D.anamnese[id];
+   if(D.corrida) delete D.corrida[id];
+   await save();
    open=null;
    view();
   }
@@ -979,8 +1011,9 @@ $('vt').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)
     alert('Digite uma distância válida em metros (ex: 2400).');
     return;
   }
+  if(!D.corrida) D.corrida = {};
   D.corrida[u] = { cooper: val, data: Date.now() };
-  save();
+  await save();
   view();
  }
  else if(c==='open'){open=id;ed=null}
@@ -994,11 +1027,12 @@ $('vt').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)
  }
  else if(c==='newR') ed={rid:null, tipo:'musculacao', n:'', ex:[{e:'',k:3,r:'10',v:''}]};
  else if(c==='newRRun') ed={rid:null, tipo:'corrida', n:'', ex:[{e:'Aquecimento', dist:'10 min', zona:'Z1'}, {e:'Treino Principal', dist:'5 km', zona:'Z2'}]};
+ data-c='editR'
  else if(c==='editR'){
   const r=rts(u).find(x=>String(x.id)===id);
   ed={rid:r.id, tipo:r.tipo||'musculacao', n:r.n, ex:r.ex.map(x=>({...x}))};
  }
- else if(c==='delR') saveR(rts(u).filter(x=>String(x.id)!==id));
+ else if(c==='delR') await saveR(rts(u).filter(x=>String(x.id)!==id));
  else if(c==='addE') ed.ex.push({e:'',k:3,r:'10',v:''});
  else if(c==='addERun') ed.ex.push({e:'', dist:'', zona:'Z2'});
  else if(c==='rmE') ed.ex.splice(i,1);
@@ -1006,7 +1040,7 @@ $('vt').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)
  else if(c==='saveR'){
   if(!ed.n.trim()) return;
   if(ed.tipo === 'corrida'){
-    const runData = calcRunningZones(D.corrida[u]?.cooper);
+    const runData = calcRunningZones(D.corrida && D.corrida[u] ? D.corrida[u].cooper : null);
     const ex = ed.ex.filter(x=>x.e.trim()).map(x=>{
       const zObj = runData ? runData.zones.find(item=>item.z===x.zona) : null;
       return {
@@ -1018,19 +1052,28 @@ $('vt').addEventListener('click',e=>{const b=e.target.closest('[data-c]');if(!b)
     });
     if(!ex.length) return;
     const r = {id:ed.rid||Date.now(), tipo:'corrida', n:ed.n.trim(), ex};
-    saveR(ed.rid?rts(u).map(x=>x.id===ed.rid?r:x):[...rts(u),r]);
+    await saveR(ed.rid?rts(u).map(x=>x.id===ed.rid?r:x):[...rts(u),r]);
   } else {
     const ex=ed.ex.filter(x=>x.e.trim()).map(x=>({e:x.e.trim(),k:x.k||3,r:String(x.r||'10').trim(),v:/^https?:\/\//i.test(x.v.trim())?x.v.trim():''}));
     if(!ex.length) return;
     const r={id:ed.rid||Date.now(), tipo:'musculacao', n:ed.n.trim(),ex};
-    saveR(ed.rid?rts(u).map(x=>x.id===ed.rid?r:x):[...rts(u),r]);
+    await saveR(ed.rid?rts(u).map(x=>x.id===ed.rid?r:x):[...rts(u),r]);
   }
   ed=null;
  }
- else if(c==='cm'){const w=b.dataset.w,t=$('c'+w).value.trim(),m={...cms(u)};if(t)m[w]=t;else delete m[w];D.coment[u]={c:m};save();document.activeElement.blur()}
+ else if(c==='cm'){
+  const w=b.dataset.w,t=$('c'+w).value.trim();
+  if(!D.coment) D.coment = {};
+  const m={...cms(u)};
+  if(t) m[w]=t; else delete m[w];
+  D.coment[u]={c:m}; 
+  await save();
+  document.activeElement.blur();
+ }
  view()});
 
-view();
+// Inicializa carregando da nuvem
+loadFromCloud();
 </script>
 </body>
 </html>
