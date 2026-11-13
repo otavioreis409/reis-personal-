@@ -1027,7 +1027,6 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
  }
  else if(c==='newR') ed={rid:null, tipo:'musculacao', n:'', ex:[{e:'',k:3,r:'10',v:''}]};
  else if(c==='newRRun') ed={rid:null, tipo:'corrida', n:'', ex:[{e:'Aquecimento', dist:'10 min', zona:'Z1'}, {e:'Treino Principal', dist:'5 km', zona:'Z2'}]};
- data-c='editR'
  else if(c==='editR'){
   const r=rts(u).find(x=>String(x.id)===id);
   ed={rid:r.id, tipo:r.tipo||'musculacao', n:r.n, ex:r.ex.map(x=>({...x}))};
