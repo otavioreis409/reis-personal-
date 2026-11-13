@@ -435,9 +435,9 @@ input[type=range]{width:100%;accent-color:var(--pri)}
 </style>
 </head>
 <body>
-<div class="top"><div class="r"><h1>Reis <span>Personal</span></h1><div class="seg" id="seg"><button data-m="0">Aluno</button><button data-m="1" id="btnCoach">Treinador</button></div></div><div id="who" class="mu"></div></div>
+<div class="top"><div class="r"><h1>Reis <span>Personal</span></h1><div class="seg" id="seg"><button data-m="0" id="btnAluno">Aluno</button><button data-m="1" id="btnCoach">Treinador</button></div></div><div id="who" class="mu"></div></div>
 <main id="app">
- <section id="vn" hidden><div class="card"><h3>Bem-vindo(a)!</h3><p class="mu">Digite seu nome para acessar seu painel de treinos:</p><input class="t" id="nm" placeholder="Seu nome"><button class="btn" style="margin-top:12px" id="nmb">Acessar</button></div></section>
+ <section id="vn" hidden><div class="card"><h3>Bem-vindo(a)!</h3><p class="mu">Digite seu nome para acessar:</p><input class="t" id="nm" placeholder="Seu nome"><button class="btn" style="margin-top:12px" id="nmb">Entrar</button></div></section>
  <section id="v0" hidden><button class="btn" id="empty">+ Iniciar treino vazio</button><h2>Minhas rotinas</h2><div id="rt"></div></section>
  <section id="v1" hidden><h2>Histórico</h2><div id="hs"></div></section>
  <section id="v2" hidden><h2>Progresso</h2><select id="sel"></select>
@@ -456,21 +456,29 @@ const work=s=>s.filter(x=>x.t!=='A');
 
 let D = JSON.parse(localStorage.getItem('reis_db') || '{"perfis":{},"treinos":{},"rotinas":{},"coment":{}}');
 
-// Pega o aluno direto da URL (ex: ?aluno=joao) ou gera um id local
+// Identifica se tem aluno na URL
 const urlParams = new URLSearchParams(window.location.search);
 let urlAluno = urlParams.get('aluno');
 let me = urlAluno ? 'aluno_' + urlAluno.toLowerCase().replace(/[^a-z0-9]/g, '_') : (localStorage.getItem('reis_me') || 'aluno_' + Math.random().toString(36).substring(2, 9));
+
 if(!urlAluno && !localStorage.getItem('reis_me')) localStorage.setItem('reis_me', me);
 
-let coachView = localStorage.getItem('reis_coach') === '1', tab = 0, W = null, tk = null, rest = 0, ed = null, open = null;
+// Se abriu com parâmetro ?aluno=nome, cadastra e força o modo aluno automaticamente
+if(urlAluno){
+  localStorage.setItem('reis_coach', '0');
+  let nomeFormatado = urlAluno.charAt(0).toUpperCase() + urlAluno.slice(1);
+  D.perfis[me] = {n: nomeFormatado};
+  localStorage.setItem('reis_db', JSON.stringify(D));
+}
+
+let coachView = !urlAluno && localStorage.getItem('reis_coach') === '1', tab = 0, W = null, tk = null, rest = 0, ed = null, open = null;
 
 function save(){ localStorage.setItem('reis_db', JSON.stringify(D)); }
 const hist=u=>(D.treinos[u]&&D.treinos[u].h)||[],rts=u=>(D.rotinas[u]&&D.rotinas[u].rt)||[],cms=u=>(D.coment[u]&&D.coment[u].c)||{};
 
-// Se entrou via link de aluno, define o nome automaticamente se já existir
-if(urlAluno && !D.perfis[me]){
-  D.perfis[me] = {n: urlAluno.charAt(0).toUpperCase() + urlAluno.slice(1)};
-  save();
+// Se for link de aluno, esconde o seletor de modo para privacidade total
+if(urlAluno){
+  $('seg').style.display = 'none';
 }
 
 $('seg').querySelectorAll('button').forEach(b=>b.onclick=()=>{
@@ -490,12 +498,12 @@ document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{tab=+b.datas
 $('nmb').onclick=()=>{const n=$('nm').value.trim();if(!n)return;D.perfis[me]={n};save();view()};
 
 function view(){
- coachView ? $('btnCoach').classList.add('on') : $('btnCoach').classList.remove('on');
+ coachView ? $('btnCoach').classList.add('on') : $('btnAluno').classList.add('on');
  const needName = !coachView && (!D.perfis[me] || !D.perfis[me].n);
  $('vn').hidden = !needName; $('vt').hidden = !coachView; $('tabs').hidden = coachView || needName;
  [0,1,2].forEach(i=>$('v'+i).hidden = coachView || needName || i!==tab);
  document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on', +x.dataset.v===tab));
- $('who').textContent = coachView ? 'Modo Treinador (Gerenciamento de Alunos)' : (D.perfis[me] ? 'Olá, '+D.perfis[me].n+'!' : '');
+ $('who').textContent = coachView ? 'Painel do Treinador' : (D.perfis[me] ? 'Olá, '+D.perfis[me].n+'!' : '');
  
  const s=new Set();
  Object.values(D.treinos).forEach(t=>(t.h||[]).forEach(h=>h.ex.forEach(x=>s.add(x.e))));
@@ -584,7 +592,7 @@ $('sel').onchange=chart;
 
 function viewC(){
  const ids=Object.keys(D.perfis);
- if(!open||!D.perfis[open]){$('vt').innerHTML='<h2>Alunos</h2>'+(ids.length?ids.map(u=>'<div class="card"><h3>'+esc(D.perfis[u].n)+(u===me?' (você)':'')+'</h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)'+(hist(u)[0]?' · último em '+dt(hist(u)[0].d):'')+' · '+rts(u).length+' rotina(s)</div>'+(hist(u)[0]&&hist(u)[0].ck&&hist(u)[0].ck.dor?'<div class="bd warn">⚠ Dor relatada no último treino</div>':'')+'<button class="btn s" style="margin-top:12px" data-c="open" data-id="'+esc(u)+'">Abrir</button></div>').join(''):'<div class="card"><p class="mu">Nenhum aluno ainda. Envie o link personalizado para cada aluno (ex: seu-site.github.io/?aluno=nome).</p></div>');return}
+ if(!open||!D.perfis[open]){$('vt').innerHTML='<h2>Alunos</h2>'+(ids.length?ids.map(u=>'<div class="card"><h3>'+esc(D.perfis[u].n)+(u===me?' (você)':'')+'</h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)'+(hist(u)[0]?' · último em '+dt(hist(u)[0].d):'')+' · '+rts(u).length+' rotina(s)</div>'+(hist(u)[0]&&hist(u)[0].ck&&hist(u)[0].ck.dor?'<div class="bd warn">⚠ Dor relatada no último treino</div>':'')+'<button class="btn s" style="margin-top:12px" data-c="open" data-id="'+esc(u)+'">Abrir</button></div>').join(''):'<div class="card"><p class="mu">Nenhum aluno ainda. Envie o link personalizado (ex: seu-site/?aluno=nome).</p></div>');return}
  const u=open,R=rts(u),best={};
  hist(u).forEach(h=>h.ex.forEach(x=>work(x.s).forEach(s=>{const v=e1(s.kg,s.r);if(!best[x.e]||v>best[x.e])best[x.e]=v})));
  let h='<button class="x" data-c="back">← Todos os alunos</button><h2 style="margin-top:4px;font-size:1.4rem">'+esc(D.perfis[u].n)+'</h2><h2>Rotinas</h2>';
