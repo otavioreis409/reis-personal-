@@ -8,6 +8,8 @@
 <!-- Firebase SDKs para Sincronização em Nuvem -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<!-- Biblioteca html2pdf para Gerar Relatório em PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
 :root{
   --bg:#0D0D0F;
@@ -213,7 +215,6 @@ h2:first-child{margin-top:0}
   border-radius:9999px;
 }
 
-/* Barra de Progresso Real no Topo do Treino */
 .prog-container{
   background:var(--ln);
   height:4px;
@@ -331,7 +332,7 @@ tr.d .ty{
 }
 .tA{color:var(--ta)!important;background:var(--pri-t)!important}
 .tF{color:var(--tf)!important;background:var(--danger-t)!important}
-.tD{color:var(--acc)!important;background:var(--acc-t)!important}
+.tD{color:var(--acc)!important;background:var(--acc-t!important)}
 
 .ex h3{color:var(--tx);margin:0;font-size:1.02rem;font-weight:700}
 .vd{
@@ -470,9 +471,30 @@ input[type=range]{width:100%;accent-color:var(--pri)}
 .z3 { background: rgba(48,209,88,0.2); color: #4ADE80; }
 .z4 { background: rgba(255,208,0,0.2); color: #FFD000; }
 .z5 { background: rgba(255,69,58,0.2); color: #FF6961; }
+
+#prBanner {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #FFD000, #FF9500);
+  color: #0D0D0F;
+  padding: 10px 20px;
+  border-radius: 99px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  box-shadow: 0 10px 25px rgba(255,208,0,0.4);
+  z-index: 9999;
+  animation: bounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes bounceIn {
+  0% { transform: translateX(-50%) scale(0); opacity: 0; }
+  100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
 </style>
 </head>
 <body>
+<div id="prBanner" hidden>🎉 Novo Recorde Pessoal Batido!</div>
 <div class="top"><div class="r"><h1>Reis <span>Personal</span></h1><div class="seg" id="seg"><button data-m="0" id="btnAluno">Aluno</button><button data-m="1" id="btnCoach">Treinador</button></div></div><div id="who" class="mu"></div></div>
 <main id="app">
  <section id="vn" hidden>
@@ -592,7 +614,7 @@ function calcRunningZones(distMeters){
   return { dist: d, vo2, vamKmh, vamPace: formatPace(vamPace), zones };
 }
 
-let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}, habitos:{}, templates:{}};
+let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}, habitos:{}, templates:{}, financeiro:{}};
 
 const urlParams = new URLSearchParams(window.location.search);
 let urlAluno = urlParams.get('aluno');
@@ -774,6 +796,22 @@ function viewA(){
 
 function prev(e,i){for(const h of hist(me)){if(h.tipo==='corrida')continue;const x=h.ex.find(y=>y.e===e);if(x&&x.s[i])return x.s[i]}return null}
 
+function getMax1RM(exercicioName){
+  let max = 0;
+  for(const h of hist(me)){
+    if(h.tipo==='corrida') continue;
+    for(const x of h.ex){
+      if(x.e.toLowerCase() === exercicioName.toLowerCase()){
+        work(x.s).forEach(s=>{
+          const r1 = e1(s.kg, s.r);
+          if(r1 > max) max = r1;
+        });
+      }
+    }
+  }
+  return max;
+}
+
 function start(rotina){
  const isRun = rotina.tipo === 'corrida';
  if(isRun){
@@ -890,6 +928,20 @@ $('w').addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||
      if(s.r===''&&s.metaReps)s.r=s.metaReps;else if(s.r===''&&p)s.r=p.r;
      if(s.rpe===''&&s.metaRpe)s.rpe=s.metaRpe;
      if(s.kg===''||s.r==='')return;
+     
+     const pesoDigitado = parseFloat(String(s.kg).replace(',','.')) || 0;
+     const repsDigitadas = parseInt(s.r) || 0;
+     if(s.t !== 'A' && pesoDigitado > 0 && repsDigitadas > 0){
+       const atual1RM = e1(pesoDigitado, repsDigitadas);
+       const antigoMax1RM = getMax1RM(W.ex[x].e);
+       if(atual1RM > antigoMax1RM && antigoMax1RM > 0){
+         const banner = $('prBanner');
+         banner.textContent = '🎉 Novo Recorde em ' + W.ex[x].e + ' (' + fmt(pesoDigitado) + 'kg) !';
+         banner.hidden = false;
+         setTimeout(() => { banner.hidden = true; }, 4000);
+       }
+     }
+
      s.d=true;rest=dTime;
    }else s.d=false;draw()}
  else if(a==='ty'){const s=W.ex[x].s[i],T=['N','A','F','D'];s.t=T[(T.indexOf(s.t)+1)%4];draw()}
@@ -937,15 +989,94 @@ function chart(){
 }
 $('sel').onchange=chart;
 
+function gerarRelatorioPDF(u){
+  const nomeAluno = D.perfis[u].n;
+  const hList = hist(u);
+  const totalTreinos = hList.length;
+  const mesAtual = new Date().toISOString().slice(0,7);
+  const treinosMes = hList.filter(item => item.d && item.d.startsWith(mesAtual)).length;
+  
+  let totalVolumeKg = 0;
+  hList.forEach(w=>{
+    if(w.tipo !== 'corrida'){
+      totalVolumeKg += w.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+s.kg*s.r,0),0);
+    }
+  });
+
+  const element = document.createElement('div');
+  element.style.padding = '30px';
+  element.style.background = '#FFFFFF';
+  element.style.color = '#111111';
+  element.style.fontFamily = 'sans-serif';
+  
+  element.innerHTML = `
+    <h1 style="color: #111; border-bottom: 2px solid #FFD000; padding-bottom: 10px;">Reis Personal - Relatório Mensal</h1>
+    <h3 style="color: #555;">Aluno: ${esc(nomeAluno)}</h3>
+    <p><b>Data de emissão:</b> ${new Date().toLocaleDateString('pt-BR')}</p>
+    <hr style="border: 0; border-top: 1px solid #ddd; margin: 20px 0;">
+    <h4>📊 Resumo de Desempenho</h4>
+    <ul>
+      <li><b>Treinos realizados este mês:</b> ${treinosMes}</li>
+      <li><b>Total de treinos no histórico:</b> ${totalTreinos}</li>
+      <li><b>Volume total acumulado de carga:</b> ${fmt(totalVolumeKg)} kg</li>
+    </ul>
+    <h4>🗓️ Histórico Recente</h4>
+    <table style="width:100%; border-collapse: collapse; font-size: 12px; margin-top: 10px;">
+      <tr style="background: #f2f2f2;"><th style="padding: 8px; border: 1px solid #ddd;">Data</th><th style="padding: 8px; border: 1px solid #ddd;">Treino</th><th style="padding: 8px; border: 1px solid #ddd;">Duração</th><th style="padding: 8px; border: 1px solid #ddd;">PSE</th></tr>
+      ${hList.slice(0, 10).map(w=>`<tr><td style="padding: 6px; border: 1px solid #ddd; text-align:center;">${dt(w.d)}</td><td style="padding: 6px; border: 1px solid #ddd;">${esc(w.n)}</td><td style="padding: 6px; border: 1px solid #ddd; text-align:center;">${mmss(w.dur)}</td><td style="padding: 6px; border: 1px solid #ddd; text-align:center;">${w.pse!=null?w.pse+'/10':'-'}</td></tr>`).join('')}
+    </table>
+    <p style="margin-top: 40px; text-align: center; color: #888; font-size: 11px;">Gerado automaticamente via Plataforma Reis Personal</p>
+  `;
+
+  const opt = {
+    margin:       10,
+    filename:     'Relatorio_Mensal_'+slugify(nomeAluno)+'.pdf',
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2 },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().from(element).set(opt).save();
+}
+
+async function togglePagamento(u, status){
+  if(!D.financeiro) D.financeiro = {};
+  const mesAtual = new Date().toISOString().slice(0,7);
+  if(!D.financeiro[u]) D.financeiro[u] = {};
+  D.financeiro[u][mesAtual] = status;
+  await save();
+  view();
+}
+
 function viewC(){
  const ids=Object.keys(D.perfis||{});
+ const mesAtual = new Date().toISOString().slice(0,7);
+
  let h=`
   <div class="card" style="border-left: 3px solid var(--pri); margin-bottom: 20px;">
-   <h3 style="color:var(--pri)">💡 Modelos de Treino & Templates</h3>
+   <h3 style="color:var(--pri)">💰 Controlo Financeiro de Mensalidades (${mesAtual})</h3>
    <p class="mu" style="margin-top:6px; font-size:0.86rem; line-height:1.5">
-    Guarde treinos predefinidos ou copie rotinas entre alunos com um clique.
+    Acompanhe rapidamente quais alunos estão em dia com os pagamentos deste mês.
    </p>
   </div>
+ `;
+
+ if(ids.length){
+   h += `<div class="card" style="overflow-x:auto">
+    <table style="font-size:0.85rem">
+      <tr><th>Aluno</th><th>Mensalidade (${mesAtual})</th><th>Ação rápida</th></tr>`;
+   h += ids.map(u => {
+     const pago = D.financeiro && D.financeiro[u] && D.financeiro[u][mesAtual];
+     return `<tr>
+       <td><b>${esc(D.perfis[u].n)}</b></td>
+       <td><span class="bd ${pago ? 'ok' : 'warn'}">${pago ? '✓ Pago em Dia' : '⚠️ Pendente'}</span></td>
+       <td><button class="btn s ${pago ? 'g' : 't'}" style="padding:4px 10px; font-size:0.75rem" onclick="togglePagamentoPin('${u}', ${!pago})">${pago ? 'Marcar Pendente' : 'Confirmar Pagamento'}</button></td>
+     </tr>`;
+   }).join('');
+   h += `</table></div>`;
+ }
+
+ h += `
   <h2>📁 Modelos Salvos (Templates)</h2>
   <div style="display:flex; gap:8px; margin-bottom:14px">
     <button class="btn t" style="flex:1" data-c="novoTemplate">+ Criar Modelo de Treino</button>
@@ -991,7 +1122,7 @@ function viewC(){
  }
 
  h += `
-  <h2>Alunos Cadastrados</h2>
+  <h2>Painel Geral de Alunos</h2>
   <button class="btn t" style="margin-bottom:16px" data-c="novoAluno">+ Adicionar Novo Aluno</button>
  `;
 
@@ -1005,7 +1136,6 @@ function viewC(){
    const anamU = D.anamnese && D.anamnese[u];
    const metaDiasSemana = anamU && parseInt(anamU.dias) ? parseInt(anamU.dias) : 3;
    const metaMes = metaDiasSemana * 4;
-   const mesAtual = new Date().toISOString().slice(0,7);
    const treinosMes = hist(u).filter(item => item.d && item.d.startsWith(mesAtual)).length;
    const aderenciaPct = Math.min(100, Math.round((treinosMes / metaMes) * 100));
 
@@ -1024,7 +1154,7 @@ function viewC(){
    }
 
    return '<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'+
-   '<div style="display:flex;align-items:center;gap:10px"><input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" '+checked+' style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer"><div><h3>'+esc(alunoNomeOriginal)+'</h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)'+(hist(u)[0]?' · último em '+dt(hist(u)[0].d):'')+'</div><div style="margin-top:2px"><span class="bd ok" style="margin:2px 0">📊 Aderência mensal: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+' treinos)</span></div><div style="margin-top:2px">'+alertAnalytics+'</div>'+(hist(u)[0]&&hist(u)[0].ck&&hist(u)[0].ck.dor?'<div class="bd warn" style="margin-top:4px">⚠ Dor relatada no último treino</div>':'')+'<div style="margin-top:6px"><button class="btn s g" style="padding:6px 10px;font-size:.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link do Aluno</button></div></div></div>'+
+   '<div style="display:flex;align-items:center;gap:10px"><input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" '+checked+' style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer"><div><h3>'+esc(alunoNomeOriginal)+'</h3><div class="mu">'+hist(u).length+' treino(s) registrado(s)'+(hist(u)[0]?' · último em '+dt(hist(u)[0].d):'')+'</div><div style="margin-top:2px"><span class="bd ok" style="margin:2px 0">📊 Aderência mensal: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+' treinos)</span></div><div style="margin-top:2px">'+alertAnalytics+'</div>'+(hist(u)[0]&&hist(u)[0].ck&&hist(u)[0].ck.dor?'<div class="bd warn" style="margin-top:4px">⚠ Dor relatada no último treino</div>':'')+'<div style="margin-top:6px; display:flex; gap:6px"><button class="btn s g" style="padding:6px 10px;font-size:.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link</button><button class="btn s t" style="padding:6px 10px;font-size:.75rem; margin:0" data-c="gerarPDF" data-id="'+esc(u)+'">📄 Baixar Relatório PDF</button></div></div></div>'+
    '<div><button class="btn s" data-c="open" data-id="'+esc(u)+'">Abrir</button><button class="x" data-c="delAluno" data-id="'+esc(u)+'" style="color:var(--danger)">Excluir</button></div></div></div>';
   }).join('');
  } else {
@@ -1125,17 +1255,27 @@ function viewC(){
        const exerIdx = i;
        
        let lastPerfText = '';
+       let recRpeText = '';
        const alunoHist = hist(u).filter(item=>item.tipo!=='corrida');
        for(const th of alunoHist){
          const foundEx = th.ex.find(item=>item.e.toLowerCase() === (x.e||'').toLowerCase());
          if(foundEx && foundEx.s && foundEx.s.length){
            lastPerfText = '💡 Último registro ('+dt(th.d)+'): ' + foundEx.s.map(s=>fmt(s.kg)+'kg×'+s.r).join(' | ');
+           
+           // Calculadora sugerida por RPE/1RM
+           const ultS = foundEx.s[foundEx.s.length - 1];
+           if(ultS && ultS.kg > 0 && ultS.r > 0){
+             const est1RM = e1(ultS.kg, ultS.r);
+             const sugeridoKg = est1RM * 0.78; // Sugestão para hipertrofia (aprox 78% 1RM)
+             recRpeText = '🧠 Sugestão IA (Base 1RM ' + fmt(est1RM) + 'kg): Próxima carga sugerida ~' + fmt(sugeridoKg) + 'kg';
+           }
            break;
          }
        }
 
        return '<div class="edr"><input class="t" list="exl" data-ex="'+exerIdx+'" data-f="e" value="'+esc(x.e)+'" placeholder="Nome do exercício" data-auto-ex="'+exerIdx+'">'+
        (lastPerfText ? '<div class="mu" style="margin-top:4px; font-size:0.78rem; color:var(--pri)">'+lastPerfText+'</div>' : '')+
+       (recRpeText ? '<div class="mu" style="margin-top:2px; font-size:0.78rem; color:var(--acc)">'+recRpeText+'</div>' : '')+
        '<div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Link do vídeo</label><input class="t" type="text" data-ex="'+exerIdx+'" data-f="v" value="'+esc(x.v||'')+'" placeholder="https://..."></div>'+
        '<div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Tempo de Descanso (segundos)</label><input class="t" type="number" data-ex="'+exerIdx+'" data-f="descanso" value="'+esc(x.descanso||90)+'" placeholder="90" style="max-width:120px"></div>'+
        '<div style="margin-top:8px"><label class="mu" style="font-size:0.75rem">Tags Rápidas de Orientação</label><div class="chips" style="margin-top:4px">'+
@@ -1184,6 +1324,10 @@ async function toggleCheck(u, status){
  await save();
 }
 
+async function togglePagamentoPin(u, status){
+  await togglePagamento(u, status);
+}
+
 $('vt').addEventListener('change',e=>{
  const t=e.target;
  if(!ed)return;
@@ -1219,11 +1363,13 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   D.rotinas[u] = {rt: r};
   await save();
  };
- if(c==='copiarRotinaOutroAluno'){
+ if(c==='gerarPDF'){
+  gerarRelatorioPDF(b.dataset.id);
+ }
+ else if(c==='copiarRotinaOutroAluno'){
   const alunosOutros = Object.keys(D.perfis||{}).filter(x=>x!==u);
   if(!alunosOutros.length){ alert('Não há outros alunos cadastrados para copiar rotinas.'); return; }
-  let msg = 'Escolha o ID do aluno de origem:\n' + alunosOutros.map(a=>'- '+a+' ('+D.perfis[a].n+')').join('\n');
-  const origem = prompt('Digite exatamente o ID do aluno (ex: aluno_nome):');
+  const origem = prompt('Digite exatamente o ID do aluno de origem (ex: aluno_nome):');
   if(origem && D.rotinas[origem] && D.rotinas[origem].rt){
     const rotinasOrigem = D.rotinas[origem].rt;
     if(rotinasOrigem.length){
@@ -1239,9 +1385,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   }
  }
  else if(c==='tagNota'){
-   const exIdx = b.dataset.ex;
-   const notaTag = b.dataset.nota;
-   alert('Tag selecionada: ' + notaTag);
+   alert('Tag selecionada: ' + b.dataset.nota);
  }
  else if(c==='novoTemplate'){
   const nomeT = prompt('Nome do modelo de treino (ex: Hipertrofia A):');
@@ -1297,6 +1441,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
    if(D.anamnese) delete D.anamnese[id];
    if(D.corrida) delete D.corrida[id];
    if(D.habitos) delete D.habitos[id];
+   if(D.financeiro) delete D.financeiro[id];
    await save();
    open=null;
    view();
