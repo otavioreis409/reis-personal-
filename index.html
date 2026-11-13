@@ -109,7 +109,7 @@ h2:first-child{margin-top:0}
   box-shadow:var(--sh);
   transition:transform .15s ease;
 }
-.card h3{margin:0 0 4px;font-size:1rem;font-weight:700;letter-spacing:-.01em}
+.card h3{margin:0;font-size:1.05rem;font-weight:700;letter-spacing:-.01em}
 .mu{color:var(--mu);font-size:.82rem}
 
 .btn{
@@ -408,7 +408,6 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   border:1px solid var(--ln);
   border-radius:8px;
   padding:4px 9px;
-  margin:8px 6px 0 0;
   background:var(--pill);
   color:var(--tx);
 }
@@ -1028,11 +1027,10 @@ function viewA(){
  $('rt').innerHTML = (R.length?R.map(r=>{
    const isRun = r.tipo === 'corrida';
    const diaSemanaBadge = r.diaSemana ? `<span class="bd" style="background:var(--acc-t);color:var(--acc)">📅 ${esc(r.diaSemana)}</span>` : '';
-   return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3>'+(isRun?'🏃 ':'🏋️ ')+esc(r.n)+'</h3><div>'+diaSemanaBadge+(isRun?'<span class="bd run">Corrida</span>':'')+'</div></div><div class="mu" style="margin-top:4px">'+
-   (isRun
-     ? r.ex.map(x=>esc(x.e)+' ('+esc(x.dist||'-')+')').join(' · ')
-     : r.ex.map(x=> (x.grupo ? '<span class="bd" style="background:var(--pri-t);color:var(--pri)">⚡ '+esc(x.grupo)+' (Seguir direto)</span> ' : '') + esc(x.e)+' ('+x.s.length+'s)').join(' · ')
-   )+'</div><button class="btn s t" style="margin-top:12px" data-r="'+r.id+'">Iniciar rotina</button></div>';
+   return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div>'+
+     '<h3>'+(isRun?'🏃 ':'🏋️ ')+esc(r.n)+'</h3>'+
+     '<div style="margin-top:6px">'+diaSemanaBadge+(isRun?' <span class="bd run">Corrida</span>':'')+'</div>'+
+   '</div></div><button class="btn s t" style="margin-top:14px; width:100%" data-r="'+r.id+'">Iniciar rotina</button></div>';
  }).join(''):'<p class="mu">Seu treinador ainda não montou rotinas para você.</p>');
 
  document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{const r=R.find(x=>x.id==b.dataset.r);start(r)});
@@ -1597,14 +1595,18 @@ function viewC(){
   const u=open,R=rts(u);
   const anam = (D.anamnese||{})[u] || {};
   let imcText = '–';
-  if(anam.alt && anam.peso){
-    const imc = anam.peso / (anam.alt * anam.alt);
-    let classif = '';
-    if(imc < 18.5) classif = 'Abaixo do peso';
-    else if(imc < 25) classif = 'Peso normal';
-    else if(imc < 30) classif = 'Sobrepeso';
-    else classif = 'Obesidade';
-    imcText = fmt(imc) + ' (' + classif + ')';
+  if(anam.alt && anam.peso && anam.alt > 0){
+    const altNum = parseFloat(anam.alt);
+    const pesoNum = parseFloat(anam.peso);
+    if(altNum > 0 && pesoNum > 0){
+      const imc = pesoNum / (altNum * altNum);
+      let classif = '';
+      if(imc < 18.5) classif = 'Abaixo do peso';
+      else if(imc < 25) classif = 'Peso normal';
+      else if(imc < 30) classif = 'Sobrepeso';
+      else classif = 'Obesidade';
+      imcText = fmt(imc) + ' (' + classif + ')';
+    }
   }
 
   h='<button class="x" data-c="back">← Todos os alunos</button><h2 style="margin-top:4px;font-size:1.4rem">'+esc(D.perfis[u].n)+'</h2>';
@@ -1684,11 +1686,7 @@ function viewC(){
     h+=R.map(r=>{
       const isRun = r.tipo === 'corrida';
       const diaBadge = r.diaSemana ? `<span class="bd" style="background:var(--acc-t);color:var(--acc)">📅 ${esc(r.diaSemana)}</span>` : '';
-      return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3>'+(isRun?'🏃 ':'🏋️ ')+esc(r.n)+'</h3><div>'+diaBadge+'</div></div><div class="mu" style="margin-top:4px">'+
-      (isRun 
-        ? r.ex.map(x=>esc(x.e)+' ('+esc(x.dist)+' · '+esc(x.zona)+')').join(' · ')
-        : r.ex.map(x=> (x.grupo ? '<span class="bd" style="background:var(--pri-t);color:var(--pri)">⚡ '+esc(x.grupo)+'</span> ' : '') + esc(x.e)+' ('+x.s.length+' séries)').join(' · ')
-      )+'</div><div style="margin-top:10px"><button class="btn s g" data-c="editR" data-id="'+r.id+'">Editar</button><button class="x" data-c="delR" data-id="'+r.id+'">Excluir</button></div></div>';
+      return '<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3>'+(isRun?'🏃 ':'🏋️ ')+esc(r.n)+'</h3><div>'+diaBadge+'</div></div><div style="margin-top:10px"><button class="btn s g" data-c="editR" data-id="'+r.id+'">Editar</button><button class="x" data-c="delR" data-id="'+r.id+'">Excluir</button></div></div>';
     }).join('')+
     '<div style="display:flex; gap:8px"><button class="btn t" style="flex:1" data-c="newR">+ Musculação</button><button class="btn g" style="flex:1; border-color:var(--acc); color:var(--acc)" data-c="newRRun">+ Corrida</button></div>'+
     '<div style="margin-top:10px"><button class="btn g" style="width:100%" data-c="salvarComoTemplate">💾 Salvar estas rotinas como Template</button></div>';
