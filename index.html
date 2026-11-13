@@ -65,7 +65,7 @@ body{
   background:rgba(13,13,15,.88);
   backdrop-filter:blur(16px);
   -webkit-backdrop-filter:blur(16px);
-  padding:14px 16px 12px;
+  padding:14px 24px 12px;
   border-bottom:1px solid var(--ln);
   z-index:5;
 }
@@ -97,6 +97,8 @@ body{
 .seg button.on{background:var(--pri);color:var(--on-pri);font-weight:700}
 
 main{max-width:680px;margin:0 auto;padding:20px 16px}
+body.is-coach main{max-width:none;padding:24px 32px;}
+
 h2{font-size:1.15rem;font-weight:700;margin:24px 0 12px;letter-spacing:-.01em}
 h2:first-child{margin-top:0}
 
@@ -528,7 +530,7 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   background: var(--card);
   border: 1px solid var(--ln);
   border-radius: 16px;
-  padding: 12px;
+  padding: 16px;
   margin-bottom: 16px;
 }
 .coach-nav-tabs {
@@ -536,16 +538,16 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   gap: 6px;
   overflow-x: auto;
   padding-bottom: 4px;
-  margin-top: 8px;
+  margin-top: 12px;
 }
 .coach-nav-tab {
   background: var(--pill);
   border: 1px solid var(--ln2);
   color: var(--mu);
-  padding: 8px 14px;
+  padding: 10px 18px;
   border-radius: 12px;
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s;
@@ -558,9 +560,14 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
 }
 .dashboard-kpi-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+@media (max-width: 768px) {
+  .dashboard-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 .kpi-card {
   background: var(--card);
@@ -689,96 +696,24 @@ const BANCO_EXER_PADRAO = [
   { n: "Supino Reto com Halteres", m: "Peitoral", v: "https://www.youtube.com/watch?v=VmB1G1K7v94" },
   { n: "Supino Inclinado com Barra", m: "Peitoral", v: "https://www.youtube.com/watch?v=DbFgADq_Gug" },
   { n: "Supino Inclinado com Halteres", m: "Peitoral", v: "https://www.youtube.com/watch?v=5xPuvmUnzZ8" },
-  { n: "Supino Declinado com Barra", m: "Peitoral", v: "" },
-  { n: "Crucifixo Reto com Halteres", m: "Peitoral", v: "" },
-  { n: "Crucifixo Inclinado com Halteres", m: "Peitoral", v: "" },
   { n: "Crucifixo na Polia (Crossover)", m: "Peitoral", v: "https://www.youtube.com/watch?v=taI4XduLlvA" },
-  { n: "Crossover Polia Alta", m: "Peitoral", v: "" },
-  { n: "Crossover Polia Baixa", m: "Peitoral", v: "" },
-  { n: "Flexão de Braços no Solo", m: "Peitoral", v: "" },
-  { n: "Paralelas para Peito (Mergulho)", m: "Peitoral", v: "" },
-  { n: "Supino na Máquina (Chest Press)", m: "Peitoral", v: "" },
-  { n: "Peck Deck (Voador)", m: "Peitoral", v: "" },
   { n: "Puxada Alta na Polia (Frente)", m: "Costas", v: "https://www.youtube.com/watch?v=CAwf7n6Luuc" },
-  { n: "Puxada Alta Triângulo", m: "Costas", v: "" },
-  { n: "Puxada com Barra Reta (Pulldown)", m: "Costas", v: "" },
   { n: "Remada Curvada com Barra", m: "Costas", v: "https://www.youtube.com/watch?v=vT2GjY_Umpw" },
-  { n: "Remada Curvada com Halteres", m: "Costas", v: "" },
   { n: "Remada Baixa na Polia", m: "Costas", v: "https://www.youtube.com/watch?v=GZbfZ033f74" },
-  { n: "Remada Unilateral com Halter (Serrote)", m: "Costas", v: "" },
-  { n: "Remada Cavalinho (T-Bar Row)", m: "Costas", v: "" },
-  { n: "Remada na Máquina Sentada", m: "Costas", v: "" },
-  { n: "Barra Fixa Pronada", m: "Costas", v: "" },
-  { n: "Barra Fixa Supinada (Chin-up)", m: "Costas", v: "" },
   { n: "Levantamento Terra Tradicional", m: "Costas", v: "https://www.youtube.com/watch?v=op9kVnSso6Q" },
-  { n: "Pulldown na Polia com Corda", m: "Costas", v: "" },
   { n: "Agachamento Livre com Barra", m: "Pernas", v: "https://www.youtube.com/watch?v=aclHkVaku9U" },
-  { n: "Agachamento Frontal com Barra", m: "Pernas", v: "" },
-  { n: "Agachamento Hack", m: "Pernas", v: "" },
-  { n: "Agachamento Sumô com Halter", m: "Pernas", v: "" },
   { n: "Leg Press 45º", m: "Pernas", v: "https://www.youtube.com/watch?v=IZxyjW7MPJQ" },
-  { n: "Leg Press Horizontal", m: "Pernas", v: "" },
   { n: "Cadeira Extensora", m: "Pernas", v: "https://www.youtube.com/watch?v=m0FOsZ5V6yA" },
   { n: "Mesa Flexora", m: "Pernas", v: "https://www.youtube.com/watch?v=ELOCsopsiUA" },
-  { n: "Cadeira Flexora", m: "Pernas", v: "" },
-  { n: "Flexor em Pé", m: "Pernas", v: "" },
   { n: "Stiff com Barra", m: "Pernas", v: "https://www.youtube.com/watch?v=1uDiWbluSE0" },
-  { n: "Stiff com Halteres", m: "Pernas", v: "" },
-  { n: "Afundo com Halteres", m: "Pernas", v: "" },
   { n: "Búlgaro com Halteres", m: "Pernas", v: "https://www.youtube.com/watch?v=2C-4rj7v0v4" },
-  { n: "Good Morning", m: "Pernas", v: "" },
   { n: "Elevação Pélvica na Máquina", m: "Glúteos", v: "https://www.youtube.com/watch?v=SE_2rvL-4aA" },
-  { n: "Elevação Pélvica com Barra", m: "Glúteos", v: "" },
-  { n: "Glúteo na Polia (Coice)", m: "Glúteos", v: "" },
-  { n: "Cadeira Abdutora", m: "Glúteos", v: "" },
-  { n: "Cadeira Adutora", m: "Pernas", v: "" },
-  { n: "Extensão de Quadril no Solo", m: "Glúteos", v: "" },
   { n: "Elevação Lateral com Halteres", m: "Ombros", v: "https://www.youtube.com/watch?v=3VscugTfxzo" },
-  { n: "Elevação Lateral na Polia", m: "Ombros", v: "" },
   { n: "Desenvolvimento com Halteres", m: "Ombros", v: "https://www.youtube.com/watch?v=qE_mksG3q9U" },
-  { n: "Desenvolvimento Militar com Barra", m: "Ombros", v: "" },
-  { n: "Desenvolvimento na Máquina", m: "Ombros", v: "" },
-  { n: "Elevação Frontal com Halteres", m: "Ombros", v: "" },
-  { n: "Crucifixo Inverso com Halteres (Posterior)", m: "Ombros", v: "" },
-  { n: "Crucifixo Inverso na Polia", m: "Ombros", v: "" },
-  { n: "Remada Alta com Barra", m: "Ombros", v: "" },
-  { n: "Encolhimento de Ombros com Halteres", m: "Ombros", v: "" },
-  { n: "Encolhimento com Barra", m: "Ombros", v: "" },
   { n: "Rosca Direta com Barra Reta", m: "Bíceps", v: "https://www.youtube.com/watch?v=ykJmrZ5v0Oo" },
-  { n: "Rosca Direta com Barra W", m: "Bíceps", v: "" },
-  { n: "Rosca Direta com Halteres (Alternada)", m: "Bíceps", v: "" },
   { n: "Rosca Martelo com Halteres", m: "Bíceps", v: "https://www.youtube.com/watch?v=7j6w0f64c6s" },
-  { n: "Rosca Scott com Barra W", m: "Bíceps", v: "" },
-  { n: "Rosca Concentrada com Halter", m: "Bíceps", v: "" },
-  { n: "Rosca na Polia Baixa", m: "Bíceps", v: "" },
-  { n: "Rosca Inversa com Barra", m: "Antebraço", v: "" },
   { n: "Tríceps Testa com Barra W", m: "Tríceps", v: "https://www.youtube.com/watch?v=d_KZxkY_0cM" },
-  { n: "Tríceps Testa com Halteres", m: "Tríceps", v: "" },
-  { n: "Tríceps na Polia com Corda", m: "Tríceps", v: "https://www.youtube.com/watch?v=vB9X-4oU3L0" },
-  { n: "Tríceps na Polia com Barra Reta", m: "Tríceps", v: "" },
-  { n: "Tríceps Coice com Halter", m: "Tríceps", v: "" },
-  { n: "Tríceps Francês com Halter", m: "Tríceps", v: "" },
-  { n: "Mergulho nas Paralelas (Tríceps)", m: "Tríceps", v: "" },
-  { n: "Supino Fechado com Barra", m: "Tríceps", v: "" },
-  { n: "Panturrilhas em Pé na Máquina", m: "Panturrilhas", v: "" },
-  { n: "Panturrilhas Sentado (Máquina Solear)", m: "Panturrilhas", v: "" },
-  { n: "Panturrilha no Leg Press 45º", m: "Panturrilhas", v: "" },
-  { n: "Panturrilha Livre em Pé", m: "Panturrilhas", v: "" },
-  { n: "Abdominal Supra no Solo (Crunch)", m: "Abdômen", v: "" },
-  { n: "Abdominal na Polia (De joelhos)", m: "Abdômen", v: "" },
-  { n: "Abdominal Infra na Barra Fixa (Elevação de pernas)", m: "Abdômen", v: "" },
-  { n: "Abdominal Infra no Solo", m: "Abdômen", v: "" },
-  { n: "Prancha Abdominal Isométrica", m: "Abdômen", v: "" },
-  { n: "Prancha Lateral", m: "Abdômen", v: "" },
-  { n: "Abdominal Remador", m: "Abdômen", v: "" },
-  { n: "Extensão de Lombar no Banco (Hiperextensão)", m: "Abdômen", v: "" },
-  { n: "Esteira - Corrida Contínua", m: "Cardio", v: "" },
-  { n: "Esteira - Caminhada Inclinada", m: "Cardio", v: "" },
-  { n: "Bicicleta Ergométrica", m: "Cardio", v: "" },
-  { n: "Elíptico (Elliptical)", m: "Cardio", v: "" },
-  { n: "Simulador de Escada (Stairmaster)", m: "Cardio", v: "" },
-  { n: "Remo Seco (Ergômetro)", m: "Cardio", v: "" },
-  { n: "Pular Corda", m: "Cardio", v: "" }
+  { n: "Tríceps na Polia com Corda", m: "Tríceps", v: "https://www.youtube.com/watch?v=vB9X-4oU3L0" }
 ];
 
 let BANCO_EXER = JSON.parse(localStorage.getItem('reis_banco_exer')) || BANCO_EXER_PADRAO;
@@ -966,6 +901,8 @@ function precisaAnamnese(){
 
 function view(){
  coachView ? $('btnCoach').classList.add('on') : $('btnAluno').classList.add('on');
+ coachView ? document.body.classList.add('is-coach') : document.body.classList.remove('is-coach');
+
  const invalidLink = !coachView && (!urlAluno || !D.perfis[me]);
  const showAnamnese = !coachView && !invalidLink && precisaAnamnese();
 
