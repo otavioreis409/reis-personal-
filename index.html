@@ -1014,7 +1014,7 @@ $('btnSalvarAnamnese').onclick = async () => {
 function precisaAnamnese(){
   if(coachView || !urlAluno) return false;
   if(W) return false;
-  // Agora respeita o controle explícito do treinador (Habilitar/Desabilitar)
+  // Respeita o controle explícito do treinador (Habilitar/Desabilitar)
   return Boolean(D.anamneseHabilitada && D.anamneseHabilitada[me]);
 }
 
@@ -1026,7 +1026,6 @@ function view(){
  const showAnamnese = !coachView && !invalidLink && precisaAnamnese();
 
  if(showAnamnese){
-   // Preenche dados anteriores como sugestão caso já exista uma anamnese prévia
    const histAnam = getAnamneseList(me);
    if(histAnam.length > 0){
      const ult = histAnam[0];
@@ -2575,51 +2574,102 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
  if(c==='gerarPDF'){
   const nomeAluno = D.perfis[id].n;
   const hList = hist(id);
-  const totalTreinos = hList.length;
   const mesAtual = new Date().toISOString().slice(0,7);
   const treinosMes = hList.filter(item => item.d && item.d.startsWith(mesAtual)).length;
-  let totalVolumeKg = 0;
+  
+  const anamList = getAnamneseList(id);
+  const anamRecente = anamList.length ? anamList[0] : null;
+  const metaD = anamRecente && parseInt(anamRecente.dias) ? parseInt(anamRecente.dias) : 3;
+  const metaMes = metaD * 4;
+  const aderenciaPct = Math.min(100, Math.round((treinosMes / metaMes) * 100));
 
-  hList.forEach(w=>{
-    if(w.tipo !== 'corrida'){
-      totalVolumeKg += w.ex.reduce((t,x)=>t+work(x.s).reduce((b,s)=>b+(s.kg||0)*(s.rf!==undefined&&s.rf!==''?parseFloat(s.rf):parseFloat(s.r||0)),0),0);
-    }
-  });
+  const cooperList = (D.cooper && D.cooper[id]) || [];
+  const cooperRecente = cooperList.length ? cooperList[0] : null;
+
+  const exerciciosUnicos = [...new Set(hList.filter(h => h.tipo !== 'corrida').flatMap(h => h.ex.map(x => x.e)))].slice(0, 5);
+  let cargasHTML = '';
+  if(exerciciosUnicos.length){
+    cargasHTML = exerciciosUnicos.map(exName => {
+      let primeiraCarga = null;
+      let ultimaCarga = null;
+      for(let idx = hList.length - 1; idx >= 0; idx--){
+        const w = hList[idx];
+        if(w.ex){
+          const found = w.ex.find(x => x.e === exName);
+          if(found && found.s){
+            const maxK = Math.max(...found.s.map(s => s.kg || 0));
+            if(maxK > 0){
+              if(primeiraCarga === null) primeiraCarga = maxK;
+              ultimaCarga = maxK;
+            }
+          }
+        }
+      }
+      if(ultimaCarga !== null){
+        const diff = primeiraCarga !== null ? (ultimaCarga - primeiraCarga) : 0;
+        const diffTxt = diff > 0 ? ` (+${fmt(diff)} kg)` : '';
+        return `<tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><b>${esc(exName)}</b></td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${fmt(ultimaCarga)} kg ${diffTxt}</td></tr>`;
+      }
+      return '';
+    }).join('');
+  }
 
   const element = document.createElement('div');
-  element.style.padding = '24px';
+  element.style.padding = '30px';
   element.style.background = '#FFFFFF';
   element.style.color = '#111111';
-  element.style.fontFamily = 'sans-serif';
-  element.style.fontSize = '12px';
-
-  let historicoHTML = hList.slice(0, 10).map(w => `
-    <div style="margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
-      <b>${esc(w.n)}</b> — Data: ${dt(w.d)} — Duração: ${mmss(w.dur)}
-      <div style="color: #555; margin-top: 4px;">
-        ${w.tipo === 'corrida' ? 'Treino de Corrida' : w.ex.map(x => `<div>• ${esc(x.e)}: ${x.s.map(s => `${fmt(s.kg||0)}kg×${s.rf!==undefined&&s.rf!==''?s.rf:s.r||0}`).join(' | ')}</div>`).join('')}
-      </div>
-    </div>
-  `).join('');
+  element.style.fontFamily = 'Helvetica, Arial, sans-serif';
+  element.style.fontSize = '13px';
+  element.style.lineHeight = '1.5';
 
   element.innerHTML = `
-    <h1 style="color: #111; border-bottom: 2px solid #FFD000; padding-bottom: 8px; font-size: 18px;">Reis Personal - Relatório de Desempenho</h1>
-    <h3 style="margin: 8px 0; font-size: 14px;">Aluno: ${esc(nomeAluno)}</h3>
-    <p style="margin: 4px 0 12px 0; color: #555;"><b>Data do relatório:</b> ${new Date().toLocaleDateString('pt-BR')}</p>
-    
-    <div style="display: flex; gap: 12px; margin-bottom: 16px; background: #f9f9f9; padding: 10px; border-radius: 6px;">
-      <div><b>Treinos no mês:</b> ${treinosMes}</div>
-      <div><b>Total Histórico:</b> ${totalTreinos}</div>
-      <div><b>Volume Total:</b> ${fmt(totalVolumeKg)} kg</div>
+    <div style="border-bottom: 3px solid #FFD000; padding-bottom: 12px; margin-bottom: 20px;">
+      <h1 style="margin: 0; font-size: 20px; color: #111;">Reis Personal — Relatório de Evolução</h1>
+      <p style="margin: 4px 0 0 0; color: #666; font-size: 14px;">Aluno(a): <b>${esc(nomeAluno)}</b> | Emitido em: ${new Date().toLocaleDateString('pt-BR')}</p>
     </div>
 
-    <h4 style="margin: 16px 0 8px 0; border-bottom: 1px solid #ddd; padding-bottom: 4px;">Últimos Treinos Registrados</h4>
-    <div>${historicoHTML || '<p>Nenhum treino registrado.</p>'}</div>
+    <div style="display: flex; gap: 15px; margin-bottom: 24px;">
+      <div style="flex: 1; background: #F8F9FA; border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px; text-align: center;">
+        <div style="font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold;">Aderência aos Treinos</div>
+        <div style="font-size: 22px; font-weight: bold; color: #22C55E; margin-top: 4px;">${aderenciaPct}%</div>
+        <div style="font-size: 11px; color: #666; margin-top: 2px;">${treinosMes} de ${metaMes} treinos no mês</div>
+      </div>
+      <div style="flex: 1; background: #F8F9FA; border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px; text-align: center;">
+        <div style="font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold;">Peso Atual</div>
+        <div style="font-size: 22px; font-weight: bold; color: #3B82F6; margin-top: 4px;">${anamRecente ? anamRecente.peso + ' kg' : '–'}</div>
+        <div style="font-size: 11px; color: #666; margin-top: 2px;">Objetivo: ${esc(anamRecente ? anamRecente.obj : 'Geral')}</div>
+      </div>
+      <div style="flex: 1; background: #F8F9FA; border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px; text-align: center;">
+        <div style="font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold;">Teste de Cooper</div>
+        <div style="font-size: 22px; font-weight: bold; color: #D97706; margin-top: 4px;">${cooperRecente ? cooperRecente.dist + ' m' : '–'}</div>
+        <div style="font-size: 11px; color: #666; margin-top: 2px;">${cooperRecente ? 'VO2: ' + fmt(cooperRecente.vo2) : 'Não realizado'}</div>
+      </div>
+    </div>
+
+    ${cargasHTML ? `
+      <h3 style="font-size: 14px; color: #111; border-bottom: 1px solid #ddd; padding-bottom: 6px; margin-top: 20px;">💪 Evolução de Carga (Principais Exercícios)</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 8px;">
+        ${cargasHTML}
+      </table>
+    ` : ''}
+
+    <h3 style="font-size: 14px; color: #111; border-bottom: 1px solid #ddd; padding-bottom: 6px; margin-top: 24px;">📋 Resumo da Avaliação / Anamnese</h3>
+    <div style="background: #F8F9FA; padding: 12px; border-radius: 8px; margin-top: 8px; font-size: 12px;">
+      ${anamRecente ? `
+        <div>• <b>Altura:</b> ${anamRecente.alt} m | <b>Peso:</b> ${anamRecente.peso} kg</div>
+        <div style="margin-top: 4px;">• <b>Dores Relatadas:</b> <span style="color: ${anamRecente.dor && anamRecente.dor.toLowerCase()!=='nenhuma'?'#DC2626':'#16A34A'}">${esc(anamRecente.dor || 'Nenhuma')}</span></div>
+        <div style="margin-top: 4px;">• <b>Frequência Alvo:</b> ${esc(anamRecente.dias || '-')} por semana</div>
+      ` : '<p style="margin:0; color:#666;">Nenhuma anamnese registrada.</p>'}
+    </div>
+
+    <div style="margin-top: 35px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 10px;">
+      Gerado automaticamente por Reis Personal — Plataforma de Gestão de Treinamento
+    </div>
   `;
 
   html2pdf().from(element).set({
     margin: 10,
-    filename: 'Relatorio_' + slugify(nomeAluno) + '.pdf',
+    filename: 'Relatorio_Evolucao_' + slugify(nomeAluno) + '.pdf',
     html2canvas: { scale: 2, useCORS: true },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
   }).save();
