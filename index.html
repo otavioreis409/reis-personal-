@@ -443,6 +443,41 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   gap: 8px;
 }
 
+/* Quadro Comparativo Pré vs Pós */
+.pre-pos-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+@media (max-width: 600px) {
+  .pre-pos-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.pre-pos-box {
+  background: var(--bg2);
+  border: 1px solid var(--ln2);
+  border-radius: 14px;
+  padding: 12px;
+  font-size: 0.84rem;
+}
+.pre-pos-box.atual {
+  border-color: var(--pri);
+  background: rgba(255, 208, 0, 0.04);
+}
+.delta-bar {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--elev);
+  border-left: 3px solid var(--ok);
+  font-size: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 /* Banner PR */
 #prBanner {
   position: fixed;
@@ -610,8 +645,8 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
  </section>
  <section id="anamnese" hidden>
   <div class="card">
-   <h3 style="color:var(--pri); font-size:1.2rem; margin-bottom:6px">📋 Anamnese Inicial</h3>
-   <p class="mu" style="margin-bottom:16px">Por favor, preencha os dados abaixo para atualizarmos seu perfil de treinamento.</p>
+   <h3 style="color:var(--pri); font-size:1.2rem; margin-bottom:6px">📋 Anamnese & Avaliação</h3>
+   <p class="mu" style="margin-bottom:16px">Preencha os dados abaixo para atualizarmos seu perfil e acompanhamento de evolução.</p>
    
    <label class="mu" style="font-size:0.75rem">Altura (ex: 1.75)</label>
    <input class="t" id="anAlt" type="number" step="0.01" placeholder="Ex: 1.75" style="margin-bottom:12px">
@@ -649,7 +684,7 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
   <div id="cooperSectionAluno" hidden>
     <div class="card" style="border-left: 3px solid var(--pri); margin-top: 20px;">
       <h3 style="color:var(--pri)">🏃 Teste de Cooper (12 minutos)</h3>
-      <p class="mu" style="margin-top:4px">Corra a maior distância possível em 12 minutos e registre abaixo para a IA calcular suas zonas de treino aeróbico.</p>
+      <p class="mu" style="margin-top:4px">Corra a maior distância possível em 12 minutos e registre abaixo para calcularmos suas zonas de treino aeróbico e evolução.</p>
       <div style="display:grid; grid-template-columns: 1fr auto; gap:10px; margin-top:10px">
         <input class="t" id="cooperDist" type="number" placeholder="Distância em metros (ex: 2400)">
         <button class="btn s t" data-cooper="salvar">Registrar Teste</button>
@@ -685,6 +720,11 @@ svg{width:100%;height:auto}[hidden]{display:none!important}
     <div class="st"><div><b id="cpMaxDist">–</b><span class="mu">Maior Distância</span></div><div><b id="cpMaxVo2">–</b><span class="mu">Melhor VO2máx</span></div><div><b id="cpTotalTests">–</b><span class="mu">Testes Feitos</span></div></div>
     <div class="card" id="cpHistoryCard"></div>
   </div>
+
+  <div id="anamneseProgressoContainer">
+    <h2 style="margin-top:24px">📋 Histórico & Evolução de Avaliações</h2>
+    <div class="card" id="anamHistoryCard"></div>
+  </div>
  </section>
  <section id="vt" hidden></section>
 </main>
@@ -711,7 +751,9 @@ const db = firebase.firestore();
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=n=>(Math.round(n*10)/10).toString().replace('.',','),e1=(l,r)=>r<=1?l:l*(1+r/30);
-const mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0'),dt=d=>d.split('-').reverse().slice(0,2).join('/');
+const mmss=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+const dt=d=>d?d.split('-').reverse().slice(0,2).join('/'):'--/--';
+const dtFull=d=>d?d.split('-').reverse().join('/'):'Data não registrada';
 const work=s=>s.filter(x=>x.t!=='A');
 const slugify=s=>s.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 
@@ -742,7 +784,13 @@ const BANCO_EXER_PADRAO = [
 
 let BANCO_EXER = JSON.parse(localStorage.getItem('reis_banco_exer')) || BANCO_EXER_PADRAO;
 
-let D = {perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, anamnese:{}, corrida:{}, habitos:{}, cooper:{}, cooperHabilitado:{}, templates:{}, financeiro:{}, avisosCoach:{}};
+let D = {
+  perfis:{}, treinos:{}, rotinas:{}, coment:{}, checks:{}, 
+  anamnese:{}, anamneseHabilitada:{},
+  corrida:{}, habitos:{}, 
+  cooper:{}, cooperHabilitado:{}, 
+  templates:{}, financeiro:{}, avisosCoach:{}
+};
 let isLoaded = false; 
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -753,6 +801,30 @@ let coachView = !urlAluno && localStorage.getItem('reis_coach') === '1', coachTa
 let filtroMusculoAtual = 'Todos';
 let filtroAlunosBusca = '';
 let filtroAlunosStatus = 'todos'; 
+
+// Helper para normalizar o histórico de anamnese (suporta formato antigo objeto único ou novo array)
+function getAnamneseList(u){
+  const raw = D.anamnese && D.anamnese[u];
+  if(!raw) return [];
+  if(Array.isArray(raw)) return raw;
+  const dataIso = raw.d || (raw.data ? new Date(raw.data).toISOString().slice(0,10) : new Date().toISOString().slice(0,10));
+  return [{ ...raw, d: dataIso }];
+}
+
+function calcImcInfo(alt, peso){
+  const altNum = parseFloat(alt);
+  const pesoNum = parseFloat(peso);
+  if(altNum > 0 && pesoNum > 0){
+    const imc = pesoNum / (altNum * altNum);
+    let classif = '';
+    if(imc < 18.5) classif = 'Abaixo do peso';
+    else if(imc < 25) classif = 'Peso normal';
+    else if(imc < 30) classif = 'Sobrepeso';
+    else classif = 'Obesidade';
+    return { val: imc, text: fmt(imc) + ' (' + classif + ')' };
+  }
+  return { val: 0, text: '–' };
+}
 
 function calcularPacesCooper(alunoId){
   const list = (D.cooper && D.cooper[alunoId]) || [];
@@ -797,6 +869,7 @@ async function loadFromCloud(){
         coment: { ...cloudData.coment, ...(D.coment || {}) },
         checks: { ...cloudData.checks, ...(D.checks || {}) },
         anamnese: { ...cloudData.anamnese, ...(D.anamnese || {}) },
+        anamneseHabilitada: { ...cloudData.anamneseHabilitada, ...(D.anamneseHabilitada || {}) },
         corrida: { ...cloudData.corrida, ...(D.corrida || {}) },
         habitos: { ...cloudData.habitos, ...(D.habitos || {}) },
         cooper: { ...cloudData.cooper, ...(D.cooper || {}) },
@@ -909,20 +982,40 @@ $('btnSalvarAnamnese').onclick = async () => {
     return;
   }
 
+  const hojeIso = new Date().toISOString().slice(0,10);
+  const novoRegistro = {
+    id: Date.now(),
+    d: hojeIso,
+    alt,
+    peso,
+    dor: dor || 'Nenhuma',
+    dias,
+    tempo,
+    obj,
+    data: Date.now()
+  };
+
+  const listaAtual = getAnamneseList(me);
+  listaAtual.unshift(novoRegistro);
+
   if(!D.anamnese) D.anamnese = {};
-  D.anamnese[me] = { alt, peso, dor, dias, tempo, obj, data: Date.now() };
+  D.anamnese[me] = listaAtual;
   await savePartial('anamnese', me, D.anamnese[me]);
+
+  // Desabilita automaticamente após o aluno preencher para não pedir toda vez
+  if(!D.anamneseHabilitada) D.anamneseHabilitada = {};
+  D.anamneseHabilitada[me] = false;
+  await savePartial('anamneseHabilitada', me, false);
+
+  alert('Avaliação salva com sucesso com a data de hoje (' + dtFull(hojeIso) + ')!');
   view();
 };
 
 function precisaAnamnese(){
   if(coachView || !urlAluno) return false;
-  const a = D.anamnese[me];
-  if(!a) return true;
-  if(W) return false; 
-  const doisMeses = 5184000000;
-  if(a.data && (Date.now() - a.data > doisMeses)) return true;
-  return false;
+  if(W) return false;
+  // Agora respeita o controle explícito do treinador (Habilitar/Desabilitar)
+  return Boolean(D.anamneseHabilitada && D.anamneseHabilitada[me]);
 }
 
 function view(){
@@ -931,6 +1024,18 @@ function view(){
 
  const invalidLink = !coachView && (!urlAluno || !D.perfis[me]);
  const showAnamnese = !coachView && !invalidLink && precisaAnamnese();
+
+ if(showAnamnese){
+   // Preenche dados anteriores como sugestão caso já exista uma anamnese prévia
+   const histAnam = getAnamneseList(me);
+   if(histAnam.length > 0){
+     const ult = histAnam[0];
+     if(!$('anAlt').value) $('anAlt').value = ult.alt || '';
+     if(!$('anDias').value) $('anDias').value = ult.dias || '';
+     if(!$('anTempo').value) $('anTempo').value = ult.tempo || '';
+     if(!$('anObj').value) $('anObj').value = ult.obj || '';
+   }
+ }
 
  $('vn').hidden = !invalidLink; 
  $('anamnese').hidden = !showAnamnese;
@@ -978,6 +1083,130 @@ function ckHTML(w){if(!w.readiness&&w.pse==null)return '';const r=w.readiness,o=
  if(w.pse!=null) o.push('<span class="bd" style="background:var(--pri-t); color:var(--pri)">🔥 Esforço Geral (PSE): '+w.pse+'/10</span>');
  return '<div style="margin-bottom:6px">'+o.join('')+'</div>'}
 
+function renderCooperPrePosHTML(list){
+  if(!list || !list.length) return '<p class="mu">Nenhum teste de Cooper registrado ainda.</p>';
+  
+  const pos = list[0]; // Mais recente
+  const pre = list[list.length - 1]; // Primeiro registrado
+
+  let html = '';
+  if(list.length >= 2){
+    const diffDist = pos.dist - pre.dist;
+    const diffVo2 = pos.vo2 - pre.vo2;
+    const sinalDist = diffDist >= 0 ? '+' : '';
+    const sinalVo2 = diffVo2 >= 0 ? '+' : '';
+    const corEvol = diffDist >= 0 ? 'var(--ok)' : 'var(--danger)';
+
+    html += `
+      <div class="pre-pos-grid">
+        <div class="pre-pos-box">
+          <div style="color:var(--mu); font-size:0.75rem; font-weight:700; text-transform:uppercase">📌 Teste Inicial (PRÉ)</div>
+          <div style="font-weight:700; color:var(--tx); margin:2px 0 6px">📅 Realizado em: ${dtFull(pre.d)}</div>
+          <div><b>Distância:</b> ${pre.dist} m</div>
+          <div><b>VO2máx:</b> ${fmt(pre.vo2)} ml/kg/min</div>
+        </div>
+        <div class="pre-pos-box atual">
+          <div style="color:var(--pri); font-size:0.75rem; font-weight:700; text-transform:uppercase">🚀 Teste Atual (PÓS)</div>
+          <div style="font-weight:700; color:var(--tx); margin:2px 0 6px">📅 Realizado em: ${dtFull(pos.d)}</div>
+          <div><b>Distância:</b> ${pos.dist} m</div>
+          <div><b>VO2máx:</b> ${fmt(pos.vo2)} ml/kg/min</div>
+        </div>
+      </div>
+      <div class="delta-bar" style="border-left-color:${corEvol}">
+        <span><b>Evolução Distância:</b> <span style="color:${corEvol}; font-weight:800">${sinalDist}${diffDist} m</span></span>
+        <span><b>Evolução VO2máx:</b> <span style="color:${corEvol}; font-weight:800">${sinalVo2}${fmt(diffVo2)}</span></span>
+      </div>
+    `;
+  } else {
+    html += `
+      <div class="pre-pos-box atual" style="margin-top:8px">
+        <div style="color:var(--pri); font-size:0.75rem; font-weight:700; text-transform:uppercase">📌 Avaliação Base (PRÉ)</div>
+        <div style="font-weight:700; color:var(--tx); margin:2px 0 6px">📅 Realizado em: ${dtFull(pre.d)}</div>
+        <div><b>Distância:</b> ${pre.dist} m · <b>VO2máx:</b> ${fmt(pre.vo2)} ml/kg/min</div>
+      </div>
+    `;
+  }
+
+  html += '<h4 style="margin:14px 0 8px; font-size:0.9rem">Todos os Testes Registrados (Datas Fixadas)</h4><div style="display:grid; gap:6px">';
+  list.forEach((t, idx) => {
+    const tag = idx === 0 && list.length > 1 ? '<span class="bd ok" style="font-size:0.68rem; padding:2px 6px">PÓS</span>' : (idx === list.length - 1 ? '<span class="bd" style="font-size:0.68rem; padding:2px 6px">PRÉ</span>' : '');
+    html += `<div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg2); padding:8px 12px; border-radius:10px; font-size:0.84rem">
+      <span>📅 <b>${dtFull(t.d)}</b> ${tag} — ${t.dist} m</span>
+      <b style="color:var(--pri)">VO2: ${fmt(t.vo2)}</b>
+    </div>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+function renderAnamnesePrePosHTML(list){
+  if(!list || !list.length) return '<p class="mu">Nenhuma anamnese registrada ainda.</p>';
+
+  const pos = list[0]; // Mais recente
+  const pre = list[list.length - 1]; // Primeira
+
+  let html = '';
+  if(list.length >= 2){
+    const diffPeso = (parseFloat(pos.peso) || 0) - (parseFloat(pre.peso) || 0);
+    const sinalPeso = diffPeso > 0 ? '+' : '';
+    const imcPre = calcImcInfo(pre.alt, pre.peso);
+    const imcPos = calcImcInfo(pos.alt, pos.peso);
+
+    html += `
+      <div class="pre-pos-grid">
+        <div class="pre-pos-box">
+          <div style="color:var(--mu); font-size:0.75rem; font-weight:700; text-transform:uppercase">📌 Avaliação Inicial (PRÉ)</div>
+          <div style="font-weight:700; color:var(--tx); margin:2px 0 6px">📅 Feita em: ${dtFull(pre.d)}</div>
+          <div><b>Peso:</b> ${pre.peso} kg · <b>Altura:</b> ${pre.alt} m</div>
+          <div><b>IMC:</b> ${imcPre.text}</div>
+          <div><b>Objetivo:</b> ${esc(pre.obj || '-')}</div>
+          <div><b>Dores:</b> <span style="color:${pre.dor&&pre.dor.toLowerCase()!=='nenhuma'?'var(--danger)':'var(--ok)'}">${esc(pre.dor || 'Nenhuma')}</span></div>
+        </div>
+        <div class="pre-pos-box atual">
+          <div style="color:var(--pri); font-size:0.75rem; font-weight:700; text-transform:uppercase">🚀 Avaliação Atual (PÓS)</div>
+          <div style="font-weight:700; color:var(--tx); margin:2px 0 6px">📅 Feita em: ${dtFull(pos.d)}</div>
+          <div><b>Peso:</b> ${pos.peso} kg · <b>Altura:</b> ${pos.alt} m</div>
+          <div><b>IMC:</b> ${imcPos.text}</div>
+          <div><b>Objetivo:</b> ${esc(pos.obj || '-')}</div>
+          <div><b>Dores:</b> <span style="color:${pos.dor&&pos.dor.toLowerCase()!=='nenhuma'?'var(--danger)':'var(--ok)'}">${esc(pos.dor || 'Nenhuma')}</span></div>
+        </div>
+      </div>
+      <div class="delta-bar">
+        <span><b>Variação de Peso:</b> <span style="color:var(--pri); font-weight:800">${sinalPeso}${fmt(diffPeso)} kg</span></span>
+        <span><b>Frequência:</b> ${esc(pos.dias || '-')} · <b>Sessão:</b> ${esc(pos.tempo || '-')}</span>
+      </div>
+    `;
+  } else {
+    const imcPre = calcImcInfo(pre.alt, pre.peso);
+    html += `
+      <div class="pre-pos-box atual" style="margin-top:8px">
+        <div style="color:var(--pri); font-size:0.75rem; font-weight:700; text-transform:uppercase">📌 Avaliação Inicial (PRÉ)</div>
+        <div style="font-weight:700; color:var(--tx); margin:2px 0 6px">📅 Feita em: ${dtFull(pre.d)}</div>
+        <div><b>Peso:</b> ${pre.peso} kg · <b>Altura:</b> ${pre.alt} m · <b>IMC:</b> ${imcPre.text}</div>
+        <div><b>Objetivo:</b> ${esc(pre.obj || '-')} · <b>Frequência:</b> ${esc(pre.dias || '-')}</div>
+        <div><b>Dores:</b> <span style="color:${pre.dor&&pre.dor.toLowerCase()!=='nenhuma'?'var(--danger)':'var(--ok)'}">${esc(pre.dor || 'Nenhuma')}</span></div>
+      </div>
+    `;
+  }
+
+  if(list.length > 1){
+    html += '<h4 style="margin:14px 0 8px; font-size:0.9rem">Histórico Completo de Avaliações</h4><div style="display:grid; gap:6px">';
+    list.forEach((a, idx) => {
+      const tag = idx === 0 ? '<span class="bd ok" style="font-size:0.68rem; padding:2px 6px">PÓS</span>' : (idx === list.length - 1 ? '<span class="bd" style="font-size:0.68rem; padding:2px 6px">PRÉ</span>' : '');
+      html += `<div style="background:var(--bg2); padding:8px 12px; border-radius:10px; font-size:0.83rem">
+        <div style="display:flex; justify-content:space-between">
+          <span>📅 <b>${dtFull(a.d)}</b> ${tag}</span>
+          <b>${a.peso} kg (IMC: ${calcImcInfo(a.alt, a.peso).text.split(' ')[0]})</b>
+        </div>
+        <div class="mu" style="margin-top:2px">Obj: ${esc(a.obj || '-')} · Dores: ${esc(a.dor || 'Nenhuma')}</div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  return html;
+}
+
 function viewA(){
  const R=rts(me);
  const hojeIso = new Date().toISOString().slice(0,10);
@@ -990,12 +1219,13 @@ function viewA(){
 
  const cooperHabilitadoParaAluno = D.cooperHabilitado && D.cooperHabilitado[me];
  if($('cooperSectionAluno')) $('cooperSectionAluno').hidden = !cooperHabilitadoParaAluno;
- if($('cooperProgressoContainer')) $('cooperProgressoContainer').hidden = !cooperHabilitadoParaAluno;
+ if($('cooperProgressoContainer')) $('cooperProgressoContainer').hidden = !cooperHabilitadoParaAluno && ((D.cooper && D.cooper[me] && D.cooper[me].length) ? false : true);
 
  if(cooperHabilitadoParaAluno){
    renderZonasCooperAluno();
-   renderProgressoCooperAluno();
  }
+ renderProgressoCooperAluno();
+ renderProgressoAnamneseAluno();
 
  $('rt').innerHTML = (R.length?R.map(r=>{
    const isRun = r.tipo === 'corrida';
@@ -1051,10 +1281,11 @@ document.addEventListener('click', async e => {
       alert('Insira uma distância válida em metros.');
       return;
     }
+    const hojeIso = new Date().toISOString().slice(0,10);
     const vo2 = (distInput - 504.9) / 44.73;
     const novoTeste = {
       id: Date.now(),
-      d: new Date().toISOString().slice(0,10),
+      d: hojeIso,
       dist: distInput,
       vo2: Math.max(0, vo2)
     };
@@ -1063,7 +1294,7 @@ document.addEventListener('click', async e => {
     D.cooper[me].unshift(novoTeste);
     await savePartial('cooper', me, D.cooper[me]);
     $('cooperDist').value = '';
-    alert('Teste de Cooper registrado e zonas calculadas com sucesso!');
+    alert('Teste de Cooper registrado em ' + dtFull(hojeIso) + ' e zonas calculadas!');
     view();
   }
 });
@@ -1085,7 +1316,7 @@ function renderZonasCooperAluno(){
 
   container.innerHTML = `
     <div style="background:var(--bg2); padding:10px; border-radius:12px; font-size:0.85rem; display:grid; gap:4px">
-      <div><b>📅 Último Teste (${dt(paces.dataUltimo)}):</b> ${paces.distUltimo} metros</div>
+      <div><b>📅 Último Teste (${dtFull(paces.dataUltimo)}):</b> ${paces.distUltimo} metros</div>
       <div style="margin-top:4px; border-top:1px solid var(--ln); padding-top:4px"><b>⚡ Ritmos Ideais por Zona (Baseado no Cooper):</b></div>
       <div class="mu">• <b>Z1 (Regenerativo):</b> ${paces.Z1}</div>
       <div class="mu">• <b>Z2 (Aeróbico Base):</b> ${paces.Z2}</div>
@@ -1111,16 +1342,14 @@ function renderProgressoCooperAluno(){
   if($('cpMaxVo2')) $('cpMaxVo2').textContent = maxVo2 > 0 ? fmt(maxVo2) : '–';
   if($('cpTotalTests')) $('cpTotalTests').textContent = list.length;
 
-  if(list.length){
-    let html = '<h4 style="margin:0 0 10px">Histórico de Testes de Cooper</h4><div style="display:grid; gap:8px">';
-    list.forEach(t => {
-      html += `<div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg2); padding:10px 14px; border-radius:12px"><span>📅 ${dt(t.d)} — <b>${t.dist} m</b></span><b style="color:var(--pri)">VO2: ${fmt(t.vo2)}</b></div>`;
-    });
-    html += '</div>';
-    card.innerHTML = html;
-  } else {
-    card.innerHTML = '<p class="mu">Nenhum teste de Cooper registrado até o momento.</p>';
-  }
+  card.innerHTML = renderCooperPrePosHTML(list);
+}
+
+function renderProgressoAnamneseAluno(){
+  const list = getAnamneseList(me);
+  const card = $('anamHistoryCard');
+  if(!card) return;
+  card.innerHTML = renderAnamnesePrePosHTML(list);
 }
 
 function renderProgressoAluno(){
@@ -1599,6 +1828,13 @@ async function toggleCooperAluno(u, status){
   view();
 }
 
+async function toggleAnamneseAluno(u, status){
+  if(!D.anamneseHabilitada) D.anamneseHabilitada = {};
+  D.anamneseHabilitada[u] = status;
+  await savePartial('anamneseHabilitada', u, status);
+  view();
+}
+
 async function limparAvisoCoach(u){
   if(D.avisosCoach && D.avisosCoach[u]){
     delete D.avisosCoach[u];
@@ -1675,7 +1911,7 @@ async function confirmarAplicarTemplate(tid){
 }
 
 // ==========================================
-// INTEGRAÇÃO COM A API DO GOOGLE GEMINI (Versão 3.8-Flash)
+// INTEGRAÇÃO COM A API DO GOOGLE GEMINI (Versão 3.8-Flash + Timeout)
 // ==========================================
 async function gerarTreinoComGemini(alunoId){
   let apiKey = localStorage.getItem('reis_gemini_key');
@@ -1686,7 +1922,8 @@ async function gerarTreinoComGemini(alunoId){
     localStorage.setItem('reis_gemini_key', apiKey);
   }
 
-  const anam = (D.anamnese && D.anamnese[alunoId]) || {};
+  const anamList = getAnamneseList(alunoId);
+  const anam = anamList.length ? anamList[0] : {};
   const nomeAluno = D.perfis[alunoId] ? D.perfis[alunoId].n : 'Aluno';
   const objetivo = anam.obj || 'Hipertrofia e definição geral';
   const dores = anam.dor || 'Nenhuma';
@@ -1725,15 +1962,20 @@ Estrutura exata obrigatória:
   const btnGerar = $('btnGerarAiTreino');
   if(btnGerar){ btnGerar.textContent = '🤖 Gemini processando...'; btnGerar.disabled = true; }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: promptTexto }] }]
-      })
+      }),
+      signal: controller.signal
     });
 
+    clearTimeout(timeoutId);
     const data = await response.json();
     if(data.error){
       throw new Error(data.error.message || 'Erro retornado pela API do Gemini.');
@@ -1770,13 +2012,18 @@ Estrutura exata obrigatória:
     view();
 
   } catch(err){
+    clearTimeout(timeoutId);
     console.error("Falha na execução da IA:", err);
-    alert('Erro ao processar a geração com o Gemini. Verifique a chave de API ou tente novamente.\nDetalhes: ' + err.message);
-    if(err.message.includes('API key') || err.message.includes('expired') || err.message.includes('invalid')){
-      localStorage.removeItem('reis_gemini_key');
+    if(err.name === 'AbortError'){
+      alert('A requisição demorou muito e foi cancelada por tempo limite (Timeout). Os servidores da Google podem estar sobrecarregados. Tente novamente em instantes.');
+    } else {
+      alert('Erro ao processar a geração com o Gemini. Detalhes: ' + err.message);
+      if(err.message.includes('API key') || err.message.includes('expired') || err.message.includes('invalid')){
+        localStorage.removeItem('reis_gemini_key');
+      }
     }
   } finally {
-    if(btnGerar){ btnGerar.textContent = '✨ Gerar Ficha com IA (Gemini)'; btnGerar.disabled = false; }
+    if(btnGerar){ btnGerar.textContent = '✨ Gerar Ficha Completa com IA (Gemini)'; btnGerar.disabled = false; }
   }
 }
 
@@ -1792,7 +2039,8 @@ function viewC(){
 
  ids.forEach(u => {
    const tMes = hist(u).filter(item => item.d && item.d.startsWith(mesAtual)).length;
-   const anamU = D.anamnese && D.anamnese[u];
+   const anamListU = getAnamneseList(u);
+   const anamU = anamListU.length ? anamListU[0] : null;
    const metaD = anamU && parseInt(anamU.dias) ? parseInt(anamU.dias) : 3;
    const metaM = metaD * 4;
    somaAderencia += Math.min(100, Math.round((tMes / metaM) * 100));
@@ -2010,7 +2258,8 @@ function viewC(){
        const nomeParam = slugify(alunoNomeOriginal);
        const linkAluno = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + '?aluno=' + nomeParam;
        
-       const anamU = D.anamnese && D.anamnese[u];
+       const anamListU = getAnamneseList(u);
+       const anamU = anamListU.length ? anamListU[0] : null;
        const metaDiasSemana = anamU && parseInt(anamU.dias) ? parseInt(anamU.dias) : 3;
        const metaMes = metaDiasSemana * 4;
        const hListAluno = hist(u);
@@ -2077,7 +2326,8 @@ function viewC(){
        const nomeParam = slugify(alunoNomeOriginal);
        const linkAluno = window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, '/') + '?aluno=' + nomeParam;
        
-       const anamU = D.anamnese && D.anamnese[u];
+       const anamListU = getAnamneseList(u);
+       const anamU = anamListU.length ? anamListU[0] : null;
        const metaDiasSemana = anamU && parseInt(anamU.dias) ? parseInt(anamU.dias) : 3;
        const metaMes = metaDiasSemana * 4;
        const hListAluno = hist(u);
@@ -2145,58 +2395,35 @@ function viewC(){
 
  if(open && D.perfis[open]){
   const u=open,R=rts(u);
-  const anam = (D.anamnese||{})[u] || {};
-  let imcText = '–';
-  if(anam.alt && anam.peso && anam.alt > 0){
-    const altNum = parseFloat(anam.alt);
-    const pesoNum = parseFloat(anam.peso);
-    if(altNum > 0 && pesoNum > 0){
-      const imc = pesoNum / (altNum * altNum);
-      let classif = '';
-      if(imc < 18.5) classif = 'Abaixo do peso';
-      else if(imc < 25) classif = 'Peso normal';
-      else if(imc < 30) classif = 'Sobrepeso';
-      else classif = 'Obesidade';
-      imcText = fmt(imc) + ' (' + classif + ')';
-    }
-  }
+  const anamList = getAnamneseList(u);
+  const anamHab = D.anamneseHabilitada && D.anamneseHabilitada[u];
 
   const cooperList = (D.cooper && D.cooper[u]) || [];
   const cooperHab = D.cooperHabilitado && D.cooperHabilitado[u];
   const pacesCoach = calcularPacesCooper(u);
-  let cooperCoachHtml = '<p class="mu">Nenhum teste de Cooper registrado.</p>';
-  if(cooperList.length){
-    const ult = cooperList[0];
-    cooperCoachHtml = `<div style="font-size:0.88rem; display:grid; gap:6px">
-      <div><b>Último Teste (${dt(ult.d)}):</b> ${ult.dist} metros</div>
-      <div><b>VO2máx:</b> <span style="color:var(--pri)">${fmt(ult.vo2)} ml/kg/min</span></div>
-      ${pacesCoach ? `<div style="margin-top:4px; border-top:1px solid var(--ln); padding-top:4px"><b>⚡ Ritmos Ideais Calculados (Pace):</b><br>
-        • Z1: ${pacesCoach.Z1} | Z2: ${pacesCoach.Z2} | Z3: ${pacesCoach.Z3}<br>
-        • Z4: ${pacesCoach.Z4} | Z5: ${pacesCoach.Z5}
-      </div>` : ''}
-    </div>`;
-  }
 
   h='<button class="x" data-c="back">← Todos os alunos</button><h2 style="margin-top:4px;font-size:1.4rem">'+esc(D.perfis[u].n)+'</h2>';
   
-  h+='<div class="card"><h3>📊 Anamnese e Avaliação</h3>'+
-     '<div style="margin-top:8px; display:grid; gap:4px; font-size:0.9rem">'+
-     '<div><b>Valor Mensalidade:</b> R$ <input type="number" style="max-width:100px; display:inline-block; padding:4px" value="'+(D.perfis[u].valor||0)+'" onchange="atualizarValorAluno(\''+u+'\', this.value)"></div>'+
-     '<div><b>Altura:</b> '+(anam.alt?anam.alt+' m':'Não informada')+'</div>'+
-     '<div><b>Peso atual:</b> '+(anam.peso?anam.peso+' kg':'Não informado')+'</div>'+
-     '<div><b>IMC:</b> <span style="color:var(--pri)">'+imcText+'</span></div>'+
-     '<div><b>Objetivo:</b> '+(anam.obj||'Não informado')+'</div>'+
-     '<div><b>Frequência desejada:</b> '+(anam.dias||'Não informada')+'</div>'+
-     '<div><b>Tempo por sessão:</b> '+(anam.tempo||'Não informado')+'</div>'+
-     '<div><b>Dores articulares:</b> <span style="color:'+(anam.dor&&anam.dor.toLowerCase()!=='nenhuma'?'var(--danger)':'var(--ok)')+'">'+(anam.dor||'Nenhuma relatada')+'</span></div>'+
-     '</div></div>';
+  h+='<div class="card"><h3>📊 Anamnese & Evolução (Pré / Pós)</h3>'+
+     '<div style="margin: 12px 0; display:flex; align-items:center; gap:10px; background:var(--bg2); padding:10px 12px; border-radius:12px">' +
+     '<input type="checkbox" id="chkHabAnamnese" '+(anamHab?'checked':'')+' onchange="toggleAnamneseAluno(\''+u+'\', this.checked)" style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer">' +
+     '<label for="chkHabAnamnese" style="font-weight:700; cursor:pointer">Habilitar Anamnese / Reavaliação para este aluno</label>' +
+     '</div>' +
+     '<div style="margin-bottom:10px; font-size:0.9rem"><b>Valor Mensalidade:</b> R$ <input type="number" style="max-width:100px; display:inline-block; padding:4px" value="'+(D.perfis[u].valor||0)+'" onchange="atualizarValorAluno(\''+u+'\', this.value)"></div>'+
+     renderAnamnesePrePosHTML(anamList)+
+     '</div>';
 
-  h+='<div class="card"><h3>🏃 Teste de Cooper & Ritmos</h3>' +
-     '<div style="margin: 12px 0; display:flex; align-items:center; gap:10px">' +
+  h+='<div class="card"><h3>🏃 Teste de Cooper & Evolução (Pré / Pós)</h3>' +
+     '<div style="margin: 12px 0; display:flex; align-items:center; gap:10px; background:var(--bg2); padding:10px 12px; border-radius:12px">' +
      '<input type="checkbox" id="chkHabCooper" '+(cooperHab?'checked':'')+' onchange="toggleCooperAluno(\''+u+'\', this.checked)" style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer">' +
      '<label for="chkHabCooper" style="font-weight:700; cursor:pointer">Habilitar Teste de Cooper para este aluno</label>' +
      '</div>' +
-     '<div style="margin-top:8px">'+cooperCoachHtml+'</div></div>';
+     renderCooperPrePosHTML(cooperList) +
+     (pacesCoach ? `<div style="margin-top:12px; background:var(--bg2); padding:10px 12px; border-radius:12px; font-size:0.84rem"><b>⚡ Ritmos Ideais Calculados (Último Teste):</b><br>
+        • Z1: ${pacesCoach.Z1} | Z2: ${pacesCoach.Z2} | Z3: ${pacesCoach.Z3}<br>
+        • Z4: ${pacesCoach.Z4} | Z5: ${pacesCoach.Z5}
+      </div>` : '') +
+     '</div>';
 
   h+='<h2>Rotinas de Treino</h2>';
   if(ed){
@@ -2472,7 +2699,10 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
    const novoId = 'aluno_' + slug;
    if(!D.perfis) D.perfis = {};
    D.perfis[novoId] = {n: nome.trim(), valor: parseFloat(valorMensal) || 150};
-   await savePartial('perfis', novoId, D.perfis[novoId]);
+   // Habilita a anamnese inicial automaticamente para novos alunos
+   if(!D.anamneseHabilitada) D.anamneseHabilitada = {};
+   D.anamneseHabilitada[novoId] = true;
+   await save();
    view();
   }
  }
@@ -2487,6 +2717,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
    if(D.rotinas) delete D.rotinas[id];
    if(D.checks) delete D.checks[id];
    if(D.anamnese) delete D.anamnese[id];
+   if(D.anamneseHabilitada) delete D.anamneseHabilitada[id];
    if(D.corrida) delete D.corrida[id];
    if(D.habitos) delete D.habitos[id];
    if(D.cooper) delete D.cooper[id];
