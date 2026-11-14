@@ -1910,7 +1910,7 @@ async function confirmarAplicarTemplate(tid){
 }
 
 // ==========================================
-// INTEGRAÇÃO COM A API DO GOOGLE GEMINI (Versão 3.8-Flash + Web Search Grounding)
+// INTEGRAÇÃO COM A API DO GOOGLE GEMINI (Versão 3.8-Flash + Web Search Grounding sem Timeout)
 // ==========================================
 async function gerarTreinoComGemini(alunoId){
   let apiKey = localStorage.getItem('reis_gemini_key');
@@ -2614,7 +2614,7 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
       if(ultimaCarga !== null){
         const diff = primeiraCarga !== null ? (ultimaCarga - primeiraCarga) : 0;
         const diffTxt = diff > 0 ? ` (+${fmt(diff)} kg)` : '';
-        return `<tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><b>${esc(exName)}</b></td><td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${fmt(ultimaCarga)} kg ${diffTxt}</td></tr>`;
+        return `<tr><td style="padding: 8px; border-bottom: 1px solid #E5E7EB; color: #111111;"><b>${esc(exName)}</b></td><td style="padding: 8px; border-bottom: 1px solid #E5E7EB; text-align: right; color: #111111;">${fmt(ultimaCarga)} kg ${diffTxt}</td></tr>`;
       }
       return '';
     }).join('');
@@ -2629,46 +2629,46 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
   element.style.lineHeight = '1.5';
 
   element.innerHTML = `
-    <div style="border-bottom: 3px solid #FFD000; padding-bottom: 12px; margin-bottom: 20px;">
-      <h1 style="margin: 0; font-size: 20px; color: #111;">Reis Personal — Relatório de Evolução</h1>
-      <p style="margin: 4px 0 0 0; color: #666; font-size: 14px;">Aluno(a): <b>${esc(nomeAluno)}</b> | Emitido em: ${new Date().toLocaleDateString('pt-BR')}</p>
+    <div style="border-bottom: 3px solid #EAB308; padding-bottom: 12px; margin-bottom: 20px;">
+      <h1 style="margin: 0; font-size: 20px; color: #111111;">Reis Personal — Relatório de Evolução</h1>
+      <p style="margin: 4px 0 0 0; color: #555555; font-size: 14px;">Aluno(a): <b>${esc(nomeAluno)}</b> | Emitido em: ${new Date().toLocaleDateString('pt-BR')}</p>
     </div>
 
     <div style="display: flex; gap: 15px; margin-bottom: 24px;">
       <div style="flex: 1; background: #F8F9FA; border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px; text-align: center;">
-        <div style="font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold;">Aderência aos Treinos</div>
-        <div style="font-size: 22px; font-weight: bold; color: #22C55E; margin-top: 4px;">${aderenciaPct}%</div>
-        <div style="font-size: 11px; color: #666; margin-top: 2px;">${treinosMes} de ${metaMes} treinos no mês</div>
+        <div style="font-size: 11px; color: #555555; text-transform: uppercase; font-weight: bold;">Aderência aos Treinos</div>
+        <div style="font-size: 22px; font-weight: bold; color: #16A34A; margin-top: 4px;">${aderenciaPct}%</div>
+        <div style="font-size: 11px; color: #555555; margin-top: 2px;">${treinosMes} de ${metaMes} treinos no mês</div>
       </div>
       <div style="flex: 1; background: #F8F9FA; border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px; text-align: center;">
-        <div style="font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold;">Peso Atual</div>
-        <div style="font-size: 22px; font-weight: bold; color: #3B82F6; margin-top: 4px;">${anamRecente ? anamRecente.peso + ' kg' : '–'}</div>
-        <div style="font-size: 11px; color: #666; margin-top: 2px;">Objetivo: ${esc(anamRecente ? anamRecente.obj : 'Geral')}</div>
+        <div style="font-size: 11px; color: #555555; text-transform: uppercase; font-weight: bold;">Peso Atual</div>
+        <div style="font-size: 22px; font-weight: bold; color: #2563EB; margin-top: 4px;">${anamRecente ? anamRecente.peso + ' kg' : '–'}</div>
+        <div style="font-size: 11px; color: #555555; margin-top: 2px;">Objetivo: ${esc(anamRecente ? anamRecente.obj : 'Geral')}</div>
       </div>
       <div style="flex: 1; background: #F8F9FA; border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px; text-align: center;">
-        <div style="font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold;">Teste de Cooper</div>
+        <div style="font-size: 11px; color: #555555; text-transform: uppercase; font-weight: bold;">Teste de Cooper</div>
         <div style="font-size: 22px; font-weight: bold; color: #D97706; margin-top: 4px;">${cooperRecente ? cooperRecente.dist + ' m' : '–'}</div>
-        <div style="font-size: 11px; color: #666; margin-top: 2px;">${cooperRecente ? 'VO2: ' + fmt(cooperRecente.vo2) : 'Não realizado'}</div>
+        <div style="font-size: 11px; color: #555555; margin-top: 2px;">${cooperRecente ? 'VO2: ' + fmt(cooperRecente.vo2) : 'Não realizado'}</div>
       </div>
     </div>
 
     ${cargasHTML ? `
-      <h3 style="font-size: 14px; color: #111; border-bottom: 1px solid #ddd; padding-bottom: 6px; margin-top: 20px;">💪 Evolução de Carga (Principais Exercícios)</h3>
+      <h3 style="font-size: 14px; color: #111111; border-bottom: 1px solid #E5E7EB; padding-bottom: 6px; margin-top: 20px;">💪 Evolução de Carga (Principais Exercícios)</h3>
       <table style="width: 100%; border-collapse: collapse; margin-top: 8px;">
         ${cargasHTML}
       </table>
     ` : ''}
 
-    <h3 style="font-size: 14px; color: #111; border-bottom: 1px solid #ddd; padding-bottom: 6px; margin-top: 24px;">📋 Resumo da Avaliação / Anamnese</h3>
-    <div style="background: #F8F9FA; padding: 12px; border-radius: 8px; margin-top: 8px; font-size: 12px;">
+    <h3 style="font-size: 14px; color: #111111; border-bottom: 1px solid #E5E7EB; padding-bottom: 6px; margin-top: 24px;">📋 Resumo da Avaliação / Anamnese</h3>
+    <div style="background: #F8F9FA; padding: 12px; border-radius: 8px; margin-top: 8px; font-size: 12px; color: #111111;">
       ${anamRecente ? `
         <div>• <b>Altura:</b> ${anamRecente.alt} m | <b>Peso:</b> ${anamRecente.peso} kg</div>
         <div style="margin-top: 4px;">• <b>Dores Relatadas:</b> <span style="color: ${anamRecente.dor && anamRecente.dor.toLowerCase()!=='nenhuma'?'#DC2626':'#16A34A'}">${esc(anamRecente.dor || 'Nenhuma')}</span></div>
         <div style="margin-top: 4px;">• <b>Frequência Alvo:</b> ${esc(anamRecente.dias || '-')} por semana</div>
-      ` : '<p style="margin:0; color:#666;">Nenhuma anamnese registrada.</p>'}
+      ` : '<p style="margin:0; color:#555555;">Nenhuma anamnese registrada.</p>'}
     </div>
 
-    <div style="margin-top: 35px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 10px;">
+    <div style="margin-top: 35px; text-align: center; font-size: 10px; color: #888888; border-top: 1px solid #E5E7EB; padding-top: 10px;">
       Gerado automaticamente por Reis Personal — Plataforma de Gestão de Treinamento
     </div>
   `;
