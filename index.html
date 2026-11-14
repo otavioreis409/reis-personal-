@@ -802,7 +802,7 @@ let filtroMusculoAtual = 'Todos';
 let filtroAlunosBusca = '';
 let filtroAlunosStatus = 'todos'; 
 
-// Helper para normalizar o histórico de anamnese (suporta formato antigo objeto único ou novo array)
+// Helper para normalizar o histórico de anamnese
 function getAnamneseList(u){
   const raw = D.anamnese && D.anamnese[u];
   if(!raw) return [];
@@ -1002,7 +1002,6 @@ $('btnSalvarAnamnese').onclick = async () => {
   D.anamnese[me] = listaAtual;
   await savePartial('anamnese', me, D.anamnese[me]);
 
-  // Desabilita automaticamente após o aluno preencher para não pedir toda vez
   if(!D.anamneseHabilitada) D.anamneseHabilitada = {};
   D.anamneseHabilitada[me] = false;
   await savePartial('anamneseHabilitada', me, false);
@@ -1014,7 +1013,6 @@ $('btnSalvarAnamnese').onclick = async () => {
 function precisaAnamnese(){
   if(coachView || !urlAluno) return false;
   if(W) return false;
-  // Respeita o controle explícito do treinador (Habilitar/Desabilitar)
   return Boolean(D.anamneseHabilitada && D.anamneseHabilitada[me]);
 }
 
@@ -1085,8 +1083,8 @@ function ckHTML(w){if(!w.readiness&&w.pse==null)return '';const r=w.readiness,o=
 function renderCooperPrePosHTML(list){
   if(!list || !list.length) return '<p class="mu">Nenhum teste de Cooper registrado ainda.</p>';
   
-  const pos = list[0]; // Mais recente
-  const pre = list[list.length - 1]; // Primeiro registrado
+  const pos = list[0]; 
+  const pre = list[list.length - 1]; 
 
   let html = '';
   if(list.length >= 2){
@@ -1141,8 +1139,8 @@ function renderCooperPrePosHTML(list){
 function renderAnamnesePrePosHTML(list){
   if(!list || !list.length) return '<p class="mu">Nenhuma anamnese registrada ainda.</p>';
 
-  const pos = list[0]; // Mais recente
-  const pre = list[list.length - 1]; // Primeira
+  const pos = list[0]; 
+  const pre = list[list.length - 1]; 
 
   let html = '';
   if(list.length >= 2){
@@ -2256,7 +2254,7 @@ function viewC(){
 
    const renderizarCardsAlunosNaoFeitos = (lista, tituloSecao) => {
      if(!lista.length) return '';
-     let res = `<h3 style="font-size:0.95rem; color:var(--mu); margin:16px 0 8px; text-transform:uppercase; letter-spacing:0.04em">${tituloSecao} (${lista.length})</h3>`;
+     let res = '<h3 style="font-size:0.95rem; color:var(--mu); margin:16px 0 8px; text-transform:uppercase; letter-spacing:0.04em">' + tituloSecao + ' (' + lista.length + ')</h3>';
      res += lista.map(({u, index}) => {
        const alunoNomeOriginal = D.perfis[u].n;
        const valorMensal = D.perfis[u].valor || 0;
@@ -2274,57 +2272,49 @@ function viewC(){
        const pago = D.financeiro && D.financeiro[u] && D.financeiro[u][mesAtual];
        const ultimoTreino = hListAluno.length ? hListAluno[0] : null;
        const concluiuHoje = ultimoTreino && ultimoTreino.d === hojeStr;
-       const avisoTreinoBadge = concluiuHoje ? `<span class="bd ok" style="background:var(--pri-t); color:var(--pri); border-color:var(--pri)">🔔 Concluiu treino hoje! (${dt(ultimoTreino.d)} · ${esc(ultimoTreino.n)})</span>` : (ultimoTreino ? `<span class="bd" style="color:var(--mu)">Último treino: ${dt(ultimoTreino.d)}</span>` : `<span class="bd warn">Nenhum treino ainda</span>`);
+       const avisoTreinoBadge = concluiuHoje ? '<span class="bd ok" style="background:var(--pri-t); color:var(--pri); border-color:var(--pri)">🔔 Concluiu treino hoje! (' + dt(ultimoTreino.d) + ' · ' + esc(ultimoTreino.n) + ')</span>' : (ultimoTreino ? '<span class="bd" style="color:var(--mu)">Último treino: ' + dt(ultimoTreino.d) + '</span>' : '<span class="bd warn">Nenhum treino ainda</span>');
 
        const avisoCoachObj = D.avisosCoach && D.avisosCoach[u];
-       const avisoCoachHtml = avisoCoachObj ? `
-         <div style="background:var(--pri-t); border:1px solid var(--pri); padding:8px 12px; border-radius:12px; margin-top:8px; display:flex; justify-content:space-between; align-items:center">
-           <div>
-             <b style="color:var(--pri); font-size:0.8rem">💬 Aviso do Aluno:</b>
-             <div style="font-size:0.85rem; color:var(--tx)">${esc(avisoCoachObj.texto)}</div>
-           </div>
-           <button class="btn s g" style="padding:4px 8px; font-size:0.7rem; margin:0" onclick="limparAvisoCoach('${u}')">Marcar Lido</button>
-         </div>
-       ` : '';
+       const avisoCoachHtml = avisoCoachObj ? '<div style="background:var(--pri-t); border:1px solid var(--pri); padding:8px 12px; border-radius:12px; margin-top:8px; display:flex; justify-content:space-between; align-items:center"><div><b style="color:var(--pri); font-size:0.8rem">💬 Aviso do Aluno:</b><div style="font-size:0.85rem; color:var(--tx)">' + esc(avisoCoachObj.texto) + '</div></div><button class="btn s g" style="padding:4px 8px; font-size:0.7rem; margin:0" onclick="limparAvisoCoach(\'' + u + '\')">Marcar Lido</button></div>' : '';
 
-       return '<div class="card" style="border-left: 3px solid '+(avisoCoachObj?'var(--pri)':(concluiuHoje?'var(--pri)':'var(--ln2)'))+'">'+
-         '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px">'+
-           '<div style="display:flex; gap:10px; align-items:flex-start; width: 100%">'+
-             '<input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer; margin-top:2px" title="Marcar como Feito">'+
-             '<div style="width: 100%">'+
-               '<div style="display:flex; align-items:center; gap:8px">'+
-                 '<span class="mu" style="font-weight:700">#'+(index+1)+'</span>'+
-                 '<h3 style="font-size:1.1rem">'+esc(alunoNomeOriginal)+'</h3>'+
-               '</div>'+
-               '<div style="margin-top:4px; font-size:0.85rem; display:flex; gap:10px; align-items:center">'+
-                 '<b style="color:var(--pri)">R$ '+fmt(valorMensal)+'</b>'+
-                 '<span class="bd '+(pago?'ok':'warn')+'">'+(pago?'✓ Pago':'⚠️ Pendente')+'</span>'+
-               '</div>'+
-               '<div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px">'+
-                 '<span class="bd ok">📊 Aderência: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+')</span>'+
-                 avisoTreinoBadge+
-               '</div>'+
-               avisoCoachHtml+
-               '<div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap">'+
-                 '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link</button>'+
-                 '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="duplicarTreinos" data-id="'+esc(u)+'">👥 Copiar Treino</button>'+
-                 '<button class="btn s t" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="gerarPDF" data-id="'+esc(u)+'">📄 PDF</button>'+
-               '</div>'+
-             '</div>'+
-           '</div>'+
-           '<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">'+
-             '<button class="btn s" style="margin:0" data-c="open" data-id="'+esc(u)+'">Abrir Aluno</button>'+
-             '<button class="x" data-c="delAluno" data-id="'+esc(u)+'" style="color:var(--danger)">Excluir</button>'+
-           '</div>'+
-         '</div>'+
+       return '<div class="card" style="border-left: 3px solid ' + (avisoCoachObj ? 'var(--pri)' : (concluiuHoje ? 'var(--pri)' : 'var(--ln2)')) + '">' +
+         '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px">' +
+           '<div style="display:flex; gap:10px; align-items:flex-start; width: 100%">' +
+             '<input type="checkbox" onclick="toggleCheck(\'' + esc(u) + '\', this.checked)" style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer; margin-top:2px" title="Marcar como Feito">' +
+             '<div style="width: 100%">' +
+               '<div style="display:flex; align-items:center; gap:8px">' +
+                 '<span class="mu" style="font-weight:700">#' + (index+1) + '</span>' +
+                 '<h3 style="font-size:1.1rem">' + esc(alunoNomeOriginal) + '</h3>' +
+               '</div>' +
+               '<div style="margin-top:4px; font-size:0.85rem; display:flex; gap:10px; align-items:center">' +
+                 '<b style="color:var(--pri)">R$ ' + fmt(valorMensal) + '</b>' +
+                 '<span class="bd ' + (pago ? 'ok' : 'warn') + '">' + (pago ? '✓ Pago' : '⚠️ Pendente') + '</span>' +
+               '</div>' +
+               '<div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px">' +
+                 '<span class="bd ok">📊 Aderência: <b>' + aderenciaPct + '%</b> (' + treinosMes + '/' + metaMes + ')</span>' +
+                 avisoTreinoBadge +
+               '</div>' +
+               avisoCoachHtml +
+               '<div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap">' +
+                 '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem" data-c="copiarLink" data-link="' + linkAluno + '">📋 Copiar Link</button>' +
+                 '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="duplicarTreinos" data-id="' + esc(u) + '">👥 Copiar Treino</button>' +
+                 '<button class="btn s t" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="gerarPDF" data-id="' + esc(u) + '">📄 PDF</button>' +
+               '</div>' +
+             '</div>' +
+           '</div>' +
+           '<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">' +
+             '<button class="btn s" style="margin:0" data-c="open" data-id="' + esc(u) + '">Abrir Aluno</button>' +
+             '<button class="x" data-c="delAluno" data-id="' + esc(u) + '" style="color:var(--danger)">Excluir</button>' +
+           '</div>' +
+         '</div>' +
        '</div>';
      }).join('');
      return res;
    };
 
-   const renderizarCardsAlunos = (lista, tituloSecao) => {
+   const renderizarCardsAlunosFeitos = (lista, tituloSecao) => {
      if(!lista.length) return '';
-     let res = `<h3 style="font-size:0.95rem; color:var(--mu); margin:16px 0 8px; text-transform:uppercase; letter-spacing:0.04em">${tituloSecao} (${lista.length})</h3>`;
+     let res = '<h3 style="font-size:0.95rem; color:var(--mu); margin:16px 0 8px; text-transform:uppercase; letter-spacing:0.04em">' + tituloSecao + ' (' + lista.length + ')</h3>';
      res += lista.map(({u, index}) => {
        const alunoNomeOriginal = D.perfis[u].n;
        const valorMensal = D.perfis[u].valor || 0;
@@ -2342,49 +2332,41 @@ function viewC(){
        const pago = D.financeiro && D.financeiro[u] && D.financeiro[u][mesAtual];
        const ultimoTreino = hListAluno.length ? hListAluno[0] : null;
        const concluiuHoje = ultimoTreino && ultimoTreino.d === hojeStr;
-       const avisoTreinoBadge = concluiuHoje ? `<span class="bd ok" style="background:var(--pri-t); color:var(--pri); border-color:var(--pri)">🔔 Concluiu treino hoje! (${dt(ultimoTreino.d)} · ${esc(ultimoTreino.n)})</span>` : (ultimoTreino ? `<span class="bd" style="color:var(--mu)">Último treino: ${dt(ultimoTreino.d)}</span>` : `<span class="bd warn">Nenhum treino ainda</span>`);
+       const avisoTreinoBadge = concluiuHoje ? '<span class="bd ok" style="background:var(--pri-t); color:var(--pri); border-color:var(--pri)">🔔 Concluiu treino hoje! (' + dt(ultimoTreino.d) + ' · ' + esc(ultimoTreino.n) + ')</span>' : (ultimoTreino ? '<span class="bd" style="color:var(--mu)">Último treino: ' + dt(ultimoTreino.d) + '</span>' : '<span class="bd warn">Nenhum treino ainda</span>');
 
        const avisoCoachObj = D.avisosCoach && D.avisosCoach[u];
-       const avisoCoachHtml = avisoCoachObj ? `
-         <div style="background:var(--pri-t); border:1px solid var(--pri); padding:8px 12px; border-radius:12px; margin-top:8px; display:flex; justify-content:space-between; align-items:center">
-           <div>
-             <b style="color:var(--pri); font-size:0.8rem">💬 Aviso do Aluno:</b>
-             <div style="font-size:0.85rem; color:var(--tx)">${esc(avisoCoachObj.texto)}</div>
-           </div>
-           <button class="btn s g" style="padding:4px 8px; font-size:0.7rem; margin:0" onclick="limparAvisoCoach('${u}')">Marcar Lido</button>
-         </div>
-       ` : '';
+       const avisoCoachHtml = avisoCoachObj ? '<div style="background:var(--pri-t); border:1px solid var(--pri); padding:8px 12px; border-radius:12px; margin-top:8px; display:flex; justify-content:space-between; align-items:center"><div><b style="color:var(--pri); font-size:0.8rem">💬 Aviso do Aluno:</b><div style="font-size:0.85rem; color:var(--tx)">' + esc(avisoCoachObj.texto) + '</div></div><button class="btn s g" style="padding:4px 8px; font-size:0.7rem; margin:0" onclick="limparAvisoCoach(\'' + u + '\')">Marcar Lido</button></div>' : '';
 
-       return '<div class="card" style="border-left: 3px solid '+(avisoCoachObj?'var(--pri)':(concluiuHoje?'var(--pri)':'var(--ln2)'))+'">'+
-         '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px">'+
-           '<div style="display:flex; gap:10px; align-items:flex-start; width: 100%">'+
-             '<input type="checkbox" onclick="toggleCheck(\''+esc(u)+'\', this.checked)" checked style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer; margin-top:2px" title="Marcar como Feito">'+
-             '<div style="width: 100%">'+
-               '<div style="display:flex; align-items:center; gap:8px">'+
-                 '<span class="mu" style="font-weight:700">#'+(index+1)+'</span>'+
-                 '<h3 style="font-size:1.1rem">'+esc(alunoNomeOriginal)+'</h3>'+
-               '</div>'+
-               '<div style="margin-top:4px; font-size:0.85rem; display:flex; gap:10px; align-items:center">'+
-                 '<b style="color:var(--pri)">R$ '+fmt(valorMensal)+'</b>'+
-                 '<span class="bd '+(pago?'ok':'warn')+'">'+(pago?'✓ Pago':'⚠️ Pendente')+'</span>'+
-               '</div>'+
-               '<div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px">'+
-                 '<span class="bd ok">📊 Aderência: <b>'+aderenciaPct+'%</b> ('+treinosMes+'/'+metaMes+')</span>'+
-                 avisoTreinoBadge+
-               '</div>'+
-               avisoCoachHtml+
-               '<div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap">'+
-                 '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem" data-c="copiarLink" data-link="'+linkAluno+'">📋 Copiar Link</button>'+
-                 '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="duplicarTreinos" data-id="'+esc(u)+'">👥 Copiar Treino</button>'+
-                 '<button class="btn s t" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="gerarPDF" data-id="'+esc(u)+'">📄 PDF</button>'+
-               '</div>'+
-             '</div>'+
-           '</div>'+
-           '<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">'+
-             '<button class="btn s" style="margin:0" data-c="open" data-id="'+esc(u)+'">Abrir Aluno</button>'+
-             '<button class="x" data-c="delAluno" data-id="'+esc(u)+'" style="color:var(--danger)">Excluir</button>'+
-           '</div>'+
-         '</div>'+
+       return '<div class="card" style="border-left: 3px solid ' + (avisoCoachObj ? 'var(--pri)' : (concluiuHoje ? 'var(--pri)' : 'var(--ln2)')) + '">' +
+         '<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px">' +
+           '<div style="display:flex; gap:10px; align-items:flex-start; width: 100%">' +
+             '<input type="checkbox" onclick="toggleCheck(\'' + esc(u) + '\', this.checked)" checked style="width:20px;height:20px;accent-color:var(--pri);cursor:pointer; margin-top:2px" title="Marcar como Feito">' +
+             '<div style="width: 100%">' +
+               '<div style="display:flex; align-items:center; gap:8px">' +
+                 '<span class="mu" style="font-weight:700">#' + (index+1) + '</span>' +
+                 '<h3 style="font-size:1.1rem">' + esc(alunoNomeOriginal) + '</h3>' +
+               '</div>' +
+               '<div style="margin-top:4px; font-size:0.85rem; display:flex; gap:10px; align-items:center">' +
+                 '<b style="color:var(--pri)">R$ ' + fmt(valorMensal) + '</b>' +
+                 '<span class="bd ' + (pago ? 'ok' : 'warn') + '">' + (pago ? '✓ Pago' : '⚠️ Pendente') + '</span>' +
+               '</div>' +
+               '<div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px">' +
+                 '<span class="bd ok">📊 Aderência: <b>' + aderenciaPct + '%</b> (' + treinosMes + '/' + metaMes + ')</span>' +
+                 avisoTreinoBadge +
+               '</div>' +
+               avisoCoachHtml +
+               '<div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap">' +
+                 '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem" data-c="copiarLink" data-link="' + linkAluno + '">📋 Copiar Link</button>' +
+                 '<button class="btn s g" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="duplicarTreinos" data-id="' + esc(u) + '">👥 Copiar Treino</button>' +
+                 '<button class="btn s t" style="padding:6px 12px; font-size:0.75rem; margin:0" data-c="gerarPDF" data-id="' + esc(u) + '">📄 PDF</button>' +
+               '</div>' +
+             '</div>' +
+           '</div>' +
+           '<div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end">' +
+             '<button class="btn s" style="margin:0" data-c="open" data-id="' + esc(u) + '">Abrir Aluno</button>' +
+             '<button class="x" data-c="delAluno" data-id="' + esc(u) + '" style="color:var(--danger)">Excluir</button>' +
+           '</div>' +
+         '</div>' +
        '</div>';
      }).join('');
      return res;
@@ -2392,7 +2374,7 @@ function viewC(){
 
    if(idsFiltrados.length){
      h += renderizarCardsAlunosNaoFeitos(listaNaoFeitos, '📌 Alunos Pendentes');
-     h += renderizarCardsAlunos(listaFeitos, '✅ Alunos Marcados / Concluídos');
+     h += renderizarCardsAlunosFeitos(listaFeitos, '✅ Alunos Marcados / Concluídos');
    } else {
      h += '<div class="card"><p class="mu">Nenhum aluno encontrado com esses critérios.</p></div>';
    }
@@ -2755,7 +2737,6 @@ $('vt').addEventListener('click',async e=>{const b=e.target.closest('[data-c]');
    const novoId = 'aluno_' + slug;
    if(!D.perfis) D.perfis = {};
    D.perfis[novoId] = {n: nome.trim(), valor: parseFloat(valorMensal) || 150};
-   // Habilita a anamnese inicial automaticamente para novos alunos
    if(!D.anamneseHabilitada) D.anamneseHabilitada = {};
    D.anamneseHabilitada[novoId] = true;
    await save();
